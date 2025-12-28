@@ -96,7 +96,7 @@
         function parseFlightTime(timeInput) {
             if (!timeInput) return null;
             let str = timeInput.toString().trim();
-            if (str.length === 3) str = "0" + str; // Handle "930"
+            if (str.length === 3) str = "0" + str; 
 
             if (str.length === 4 && !isNaN(str)) {
                 const hours = parseInt(str.substring(0, 2), 10);
@@ -118,6 +118,17 @@
             }
             if (str.includes('T')) return str.split('T')[1].substring(0, 5);
             return str;
+        }
+
+        // New Helper: Format Date Object -> "14:15"
+        function formatDateToHHMM(dateObj) {
+            if (!dateObj) return "";
+            let h = dateObj.getHours();
+            let m = dateObj.getMinutes();
+            // Pad with zero if needed (e.g. 9 -> "09")
+            const hStr = h < 10 ? "0" + h : h;
+            const mStr = m < 10 ? "0" + m : m;
+            return hStr + ":" + mStr;
         }
 
         async function fetchFlightData() {
@@ -145,7 +156,6 @@
                     const isBase = (typeof rawEta === 'string' && rawEta.toUpperCase().trim() === 'BASE');
 
                     // Calculate "Effective Departure Time"
-                    // If BASE: use sheet DEP. If Arrival: use ETA + 40 mins.
                     let effectiveDepTime = null;
                     
                     if (isBase) {
@@ -154,42 +164,38 @@
                         // Add 40 minutes to ETA
                         effectiveDepTime = new Date(etaTime.getTime() + 40 * 60000);
                     } else {
-                        // Fallback if no ETA and not BASE, just use Dep sheet time
                         effectiveDepTime = depTimeFromSheet;
                     }
 
                     // --- COLOR LOGIC (Sequential Overrides) ---
                     
-                    // 0. Default
                     let rowColor = row.color !== '#ffffff' ? row.color : '#ffffff'; 
 
                     // 1. Blue Logic (ETA/Base)
                     if (isBase && depTimeFromSheet) {
                         const diffMins = (depTimeFromSheet - now) / (1000 * 60);
-                        if (diffMins <= 75) rowColor = '#e1f5fe'; // Light Blue
+                        if (diffMins <= 75) rowColor = '#e1f5fe'; 
                     } 
                     else if (etaTime) {
                         const diffMins = (etaTime - now) / (1000 * 60);
-                        if (diffMins <= 15) rowColor = '#e1f5fe'; // Light Blue
+                        if (diffMins <= 15) rowColor = '#e1f5fe'; 
                     }
 
-                    // 2. Crew Logic (Yellow) - Overrides Blue
+                    // 2. Crew Logic (Yellow)
                     if (rawCrew && rawCrew.toString().trim() !== "") {
-                        rowColor = '#fff9c4'; // Yellow
+                        rowColor = '#fff9c4'; 
                     }
 
-                    // 3. Bowser Logic (Green) - Overrides Yellow & Blue
+                    // 3. Bowser Logic (Green)
                     if (rawBowser && rawBowser.toString().trim() !== "") {
-                        rowColor = '#dcedc8'; // Green
+                        rowColor = '#dcedc8'; 
                     }
 
-                    // 4. Departure Logic (Red) - Overrides ALL
-                    // Uses "Effective Dep Time" (Sheet Dep OR ETA+40)
+                    // 4. Departure Logic (Red)
                     if (effectiveDepTime) {
                         const diffMins = (effectiveDepTime - now) / (1000 * 60);
-                        // If within 15 mins of effective departure (or past time)
                         if (diffMins <= 15) {
-                            rowColor = '#ffcdd2'; // Light Red
+                            rowColor = '#ffcdd2'; 
                         }
                     }
 
@@ -198,9 +204,23 @@
                     // --- RENDER CELLS ---
                     row.data.forEach((cellData, index) => {
                         const td = document.createElement('td');
-                        if (index === 1 || index === 5) {
+                        
+                        // DEP Column (Index 1) - REVISED LOGIC
+                        if (index === 1) {
+                            // If it's NOT Base, and we have an ETA, show calculated time
+                            if (!isBase && etaTime && effectiveDepTime) {
+                                td.textContent = formatDateToHHMM(effectiveDepTime); // Shows ETA+40
+                                td.style.fontWeight = "bold"; // Make calculated time bold
+                            } else {
+                                td.textContent = formatTimeDisplay(cellData); // Shows Sheet Data
+                            }
+                        } 
+                        // ETA Column (Index 5)
+                        else if (index === 5) {
                             td.textContent = formatTimeDisplay(cellData);
-                        } else {
+                        } 
+                        // All other columns
+                        else {
                             td.textContent = cellData;
                         }
                         tr.appendChild(td);
