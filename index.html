@@ -9,7 +9,6 @@
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
             margin: 20px;
-            /* Prevent the whole page from scrolling, force scroll on table only */
             overflow: hidden; 
         }
         h1 {
@@ -25,10 +24,10 @@
             margin-bottom: 15px;
         }
         
-        /* THE FIX: Create a specific scrolling window for the table */
+        /* Table Container */
         .table-container {
-            height: 85vh; /* Takes up 85% of the screen height */
-            overflow: auto; /* Enables both vertical and horizontal scroll here */
+            height: 85vh; 
+            overflow: auto; 
             border: 1px solid #999;
             background-color: white;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
@@ -36,7 +35,7 @@
 
         table {
             width: 100%;
-            border-collapse: separate; /* Required for sticky to work well in some browsers */
+            border-collapse: separate; 
             border-spacing: 0;
         }
         
@@ -48,21 +47,20 @@
             font-size: 14px;
         }
 
-        /* STICKY HEADER STYLES */
+        /* Sticky Header */
         th {
             background-color: #333;
             color: white;
             position: sticky;
-            top: 0; /* Sticks to the top of .table-container */
-            z-index: 2; /* Ensures it floats above the data */
+            top: 0; 
+            z-index: 2; 
             border-top: none;
         }
 
-        /* Mobile responsive adjustments */
         @media screen and (max-width: 600px) {
             table { font-size: 11px; }
             th, td { padding: 8px; }
-            .table-container { height: 80vh; } /* Slightly smaller on mobile */
+            .table-container { height: 80vh; } 
         }
     </style>
 </head>
@@ -96,6 +94,47 @@
         const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbxZ4c88cfqMzpm4nGUs5m4cEbp5QtGtNN9lQIIFVLFsMiDFJYb6MYhnN71oNaGUE9m4PQ/exec';
         // --------------------------------------
 
+        // 1. Helper to Parse "1415" into a real Date object for comparison
+        function parseFlightTime(timeInput) {
+            if (!timeInput) return null;
+            
+            let str = timeInput.toString().trim();
+
+            // Handle 3 digits (e.g. "930" -> "0930") just in case
+            if (str.length === 3) str = "0" + str;
+
+            // Check if it is the HHMM format
+            if (str.length === 4 && !isNaN(str)) {
+                const hours = parseInt(str.substring(0, 2), 10);
+                const minutes = parseInt(str.substring(2, 4), 10);
+                
+                const now = new Date();
+                // Create a date object for TODAY with this time
+                return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
+            }
+            
+            // Fallback: If it's a full Date string
+            if (str.includes('T')) return new Date(str);
+            
+            return null;
+        }
+
+        // 2. Helper to display "1415" as "14:15" visually
+        function formatTimeDisplay(val) {
+            if (!val) return "";
+            const str = val.toString().trim();
+            // If it looks like HHMM, insert a colon
+            if (/^\d{3,4}$/.test(str)) {
+                if(str.length === 4) return str.substring(0, 2) + ":" + str.substring(2, 4);
+                if(str.length === 3) return "0" + str.substring(0, 1) + ":" + str.substring(1, 3);
+            }
+            // If it's a long date string, cut it short
+            if (str.includes('T')) {
+                return str.split('T')[1].substring(0, 5);
+            }
+            return str;
+        }
+
         async function fetchFlightData() {
             const statusMsg = document.getElementById('statusMsg');
             
@@ -106,21 +145,68 @@
                 const tableBody = document.querySelector('#flightTable tbody');
                 tableBody.innerHTML = ''; 
 
+                const now = new Date();
+
                 flightList.forEach(row => {
                     const tr = document.createElement('tr');
                     
-                    if(row.color !== '#ffffff') {
-                        tr.style.backgroundColor = row.color;
+                    // Column Indexes: 0:Flight, 1:Dep, 2:Sec, 3:Call, 4:Bay, 5:ETA, 6:Crew, 7:Bowser, 8:Comment
+                    const rawDep   = row.data[1];
+                    const rawEta   = row.data[5];
+                    const rawCrew  = row.data[6];
+                    const rawBowser= row.data[7];
+
+                    // --- COLOR LOGIC ---
+                    let rowColor = row.color !== '#ffffff' ? row.color : '#ffffff'; 
+
+                    // 1. Crew (Yellow)
+                    if (rawCrew && rawCrew.toString().trim() !== "") {
+                        rowColor = '#fff9c4'; 
                     }
 
-                    row.data.forEach(cellData => {
+                    // 2. Bowser (Green)
+                    if (rawBowser && rawBowser.toString().trim() !== "") {
+                        rowColor = '#dcedc8'; 
+                    }
+
+                    // Parse times for alerts
+                    const depTime = parseFlightTime(rawDep);
+                    const etaTime = parseFlightTime(rawEta);
+
+                    // 3. Arrival/Base Logic (Blue)
+                    // Check if ETA column specifically says "BASE"
+                    const isBase = (typeof rawEta === 'string' && rawEta.toUpperCase().trim() === 'BASE');
+                    
+                    if (isBase && depTime) {
+                        // BASE Logic: If within 75 mins of DEP
+                        const diffMs = depTime - now; 
+                        const diffMins = diffMs / (1000 * 60);
+                        if (diffMins <= 75) rowColor = '#e1f5fe'; 
+                    } 
+                    else if (etaTime) {
+                        // ETA Logic: If within 15 mins of ETA
+                        const diffMs = etaTime - now;
+                        const diffMins = diffMs / (1000 * 60);
+                        if (diffMins <= 15) rowColor = '#e1f5fe';
+                    }
+
+                    // 4. Departure Logic (Red) - Highest Priority Alert
+                    if (depTime) {
+                        const diffMs = depTime - now;
+                        const diffMins = diffMs / (1000 * 60);
+                        // If time to departure is 15 mins or less (or past departure)
+                        if (diffMins <= 15) rowColor = '#ffcdd2'; 
+                    }
+
+                    tr.style.backgroundColor = rowColor;
+
+                    // --- RENDER CELLS ---
+                    row.data.forEach((cellData, index) => {
                         const td = document.createElement('td');
                         
-                        const isDate = typeof cellData === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(cellData);
-
-                        if (isDate) {
-                             let timePart = cellData.split('T')[1]; 
-                             td.textContent = timePart.substring(0, 5); 
+                        // Apply formatting to DEP (index 1) and ETA (index 5)
+                        if (index === 1 || index === 5) {
+                            td.textContent = formatTimeDisplay(cellData);
                         } else {
                             td.textContent = cellData;
                         }
@@ -130,8 +216,8 @@
                     tableBody.appendChild(tr);
                 });
 
-                const now = new Date();
                 statusMsg.textContent = 'Last updated: ' + now.toLocaleTimeString();
+                statusMsg.style.color = '#666';
 
             } catch (error) {
                 console.error('Error fetching data:', error);
@@ -141,7 +227,7 @@
         }
 
         fetchFlightData();
-        setInterval(fetchFlightData, 30000);
+        setInterval(fetchFlightData, 30000); 
     </script>
 
 </body>
