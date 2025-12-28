@@ -24,7 +24,6 @@
             margin-bottom: 15px;
         }
         
-        /* Table Container */
         .table-container {
             height: 85vh; 
             overflow: auto; 
@@ -47,7 +46,6 @@
             font-size: 14px;
         }
 
-        /* Sticky Header */
         th {
             background-color: #333;
             color: white;
@@ -85,7 +83,7 @@
                 </tr>
             </thead>
             <tbody>
-                </tbody>
+            </tbody>
         </table>
     </div>
 
@@ -94,44 +92,31 @@
         const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbxZ4c88cfqMzpm4nGUs5m4cEbp5QtGtNN9lQIIFVLFsMiDFJYb6MYhnN71oNaGUE9m4PQ/exec';
         // --------------------------------------
 
-        // 1. Helper to Parse "1415" into a real Date object for comparison
+        // Helper: Parse "1415" to Date Object
         function parseFlightTime(timeInput) {
             if (!timeInput) return null;
-            
             let str = timeInput.toString().trim();
+            if (str.length === 3) str = "0" + str; // Handle "930"
 
-            // Handle 3 digits (e.g. "930" -> "0930") just in case
-            if (str.length === 3) str = "0" + str;
-
-            // Check if it is the HHMM format
             if (str.length === 4 && !isNaN(str)) {
                 const hours = parseInt(str.substring(0, 2), 10);
                 const minutes = parseInt(str.substring(2, 4), 10);
-                
                 const now = new Date();
-                // Create a date object for TODAY with this time
                 return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
             }
-            
-            // Fallback: If it's a full Date string
             if (str.includes('T')) return new Date(str);
-            
             return null;
         }
 
-        // 2. Helper to display "1415" as "14:15" visually
+        // Helper: Format display "1415" -> "14:15"
         function formatTimeDisplay(val) {
             if (!val) return "";
             const str = val.toString().trim();
-            // If it looks like HHMM, insert a colon
             if (/^\d{3,4}$/.test(str)) {
                 if(str.length === 4) return str.substring(0, 2) + ":" + str.substring(2, 4);
                 if(str.length === 3) return "0" + str.substring(0, 1) + ":" + str.substring(1, 3);
             }
-            // If it's a long date string, cut it short
-            if (str.includes('T')) {
-                return str.split('T')[1].substring(0, 5);
-            }
+            if (str.includes('T')) return str.split('T')[1].substring(0, 5);
             return str;
         }
 
@@ -141,7 +126,6 @@
             try {
                 const response = await fetch(SHEET_API_URL);
                 const flightList = await response.json();
-                
                 const tableBody = document.querySelector('#flightTable tbody');
                 tableBody.innerHTML = ''; 
 
@@ -150,52 +134,63 @@
                 flightList.forEach(row => {
                     const tr = document.createElement('tr');
                     
-                    // Column Indexes: 0:Flight, 1:Dep, 2:Sec, 3:Call, 4:Bay, 5:ETA, 6:Crew, 7:Bowser, 8:Comment
                     const rawDep   = row.data[1];
                     const rawEta   = row.data[5];
                     const rawCrew  = row.data[6];
                     const rawBowser= row.data[7];
 
-                    // --- COLOR LOGIC ---
+                    // --- CALCULATE TIMES ---
+                    const depTimeFromSheet = parseFlightTime(rawDep);
+                    const etaTime = parseFlightTime(rawEta);
+                    const isBase = (typeof rawEta === 'string' && rawEta.toUpperCase().trim() === 'BASE');
+
+                    // Calculate "Effective Departure Time"
+                    // If BASE: use sheet DEP. If Arrival: use ETA + 40 mins.
+                    let effectiveDepTime = null;
+                    
+                    if (isBase) {
+                        effectiveDepTime = depTimeFromSheet;
+                    } else if (etaTime) {
+                        // Add 40 minutes to ETA
+                        effectiveDepTime = new Date(etaTime.getTime() + 40 * 60000);
+                    } else {
+                        // Fallback if no ETA and not BASE, just use Dep sheet time
+                        effectiveDepTime = depTimeFromSheet;
+                    }
+
+                    // --- COLOR LOGIC (Sequential Overrides) ---
+                    
+                    // 0. Default
                     let rowColor = row.color !== '#ffffff' ? row.color : '#ffffff'; 
 
-                    // 1. Crew (Yellow)
-                    if (rawCrew && rawCrew.toString().trim() !== "") {
-                        rowColor = '#fff9c4'; 
-                    }
-
-                    // 2. Bowser (Green)
-                    if (rawBowser && rawBowser.toString().trim() !== "") {
-                        rowColor = '#dcedc8'; 
-                    }
-
-                    // Parse times for alerts
-                    const depTime = parseFlightTime(rawDep);
-                    const etaTime = parseFlightTime(rawEta);
-
-                    // 3. Arrival/Base Logic (Blue)
-                    // Check if ETA column specifically says "BASE"
-                    const isBase = (typeof rawEta === 'string' && rawEta.toUpperCase().trim() === 'BASE');
-                    
-                    if (isBase && depTime) {
-                        // BASE Logic: If within 75 mins of DEP
-                        const diffMs = depTime - now; 
-                        const diffMins = diffMs / (1000 * 60);
-                        if (diffMins <= 75) rowColor = '#e1f5fe'; 
+                    // 1. Blue Logic (ETA/Base)
+                    if (isBase && depTimeFromSheet) {
+                        const diffMins = (depTimeFromSheet - now) / (1000 * 60);
+                        if (diffMins <= 75) rowColor = '#e1f5fe'; // Light Blue
                     } 
                     else if (etaTime) {
-                        // ETA Logic: If within 15 mins of ETA
-                        const diffMs = etaTime - now;
-                        const diffMins = diffMs / (1000 * 60);
-                        if (diffMins <= 15) rowColor = '#e1f5fe';
+                        const diffMins = (etaTime - now) / (1000 * 60);
+                        if (diffMins <= 15) rowColor = '#e1f5fe'; // Light Blue
                     }
 
-                    // 4. Departure Logic (Red) - Highest Priority Alert
-                    if (depTime) {
-                        const diffMs = depTime - now;
-                        const diffMins = diffMs / (1000 * 60);
-                        // If time to departure is 15 mins or less (or past departure)
-                        if (diffMins <= 15) rowColor = '#ffcdd2'; 
+                    // 2. Crew Logic (Yellow) - Overrides Blue
+                    if (rawCrew && rawCrew.toString().trim() !== "") {
+                        rowColor = '#fff9c4'; // Yellow
+                    }
+
+                    // 3. Bowser Logic (Green) - Overrides Yellow & Blue
+                    if (rawBowser && rawBowser.toString().trim() !== "") {
+                        rowColor = '#dcedc8'; // Green
+                    }
+
+                    // 4. Departure Logic (Red) - Overrides ALL
+                    // Uses "Effective Dep Time" (Sheet Dep OR ETA+40)
+                    if (effectiveDepTime) {
+                        const diffMins = (effectiveDepTime - now) / (1000 * 60);
+                        // If within 15 mins of effective departure (or past time)
+                        if (diffMins <= 15) {
+                            rowColor = '#ffcdd2'; // Light Red
+                        }
                     }
 
                     tr.style.backgroundColor = rowColor;
@@ -203,8 +198,6 @@
                     // --- RENDER CELLS ---
                     row.data.forEach((cellData, index) => {
                         const td = document.createElement('td');
-                        
-                        // Apply formatting to DEP (index 1) and ETA (index 5)
                         if (index === 1 || index === 5) {
                             td.textContent = formatTimeDisplay(cellData);
                         } else {
@@ -220,8 +213,8 @@
                 statusMsg.style.color = '#666';
 
             } catch (error) {
-                console.error('Error fetching data:', error);
-                statusMsg.textContent = 'Error: Could not refresh data.';
+                console.error('Error:', error);
+                statusMsg.textContent = 'Error loading data.';
                 statusMsg.style.color = 'red';
             }
         }
