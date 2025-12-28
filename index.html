@@ -24,6 +24,7 @@
             margin-bottom: 15px;
         }
         
+        /* Table Container */
         .table-container {
             height: 85vh; 
             overflow: auto; 
@@ -46,6 +47,7 @@
             font-size: 14px;
         }
 
+        /* Sticky Header */
         th {
             background-color: #333;
             color: white;
@@ -83,7 +85,7 @@
                 </tr>
             </thead>
             <tbody>
-            </tbody>
+                </tbody>
         </table>
     </div>
 
@@ -92,12 +94,11 @@
         const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbxZ4c88cfqMzpm4nGUs5m4cEbp5QtGtNN9lQIIFVLFsMiDFJYb6MYhnN71oNaGUE9m4PQ/exec';
         // --------------------------------------
 
-        // Helper: Parse "1415" to Date Object
+        // Helper: Convert "1415" or ISO string to Date Object
         function parseFlightTime(timeInput) {
             if (!timeInput) return null;
             let str = timeInput.toString().trim();
             if (str.length === 3) str = "0" + str; 
-
             if (str.length === 4 && !isNaN(str)) {
                 const hours = parseInt(str.substring(0, 2), 10);
                 const minutes = parseInt(str.substring(2, 4), 10);
@@ -108,7 +109,7 @@
             return null;
         }
 
-        // Helper: Format display "1415" -> "14:15"
+        // Helper: Format raw input for display (e.g. 1415 -> 14:15)
         function formatTimeDisplay(val) {
             if (!val) return "";
             const str = val.toString().trim();
@@ -120,12 +121,11 @@
             return str;
         }
 
-        // New Helper: Format Date Object -> "14:15"
+        // Helper: Format Date Object to "14:15"
         function formatDateToHHMM(dateObj) {
             if (!dateObj) return "";
             let h = dateObj.getHours();
             let m = dateObj.getMinutes();
-            // Pad with zero if needed (e.g. 9 -> "09")
             const hStr = h < 10 ? "0" + h : h;
             const mStr = m < 10 ? "0" + m : m;
             return hStr + ":" + mStr;
@@ -137,61 +137,67 @@
             try {
                 const response = await fetch(SHEET_API_URL);
                 const flightList = await response.json();
+                
                 const tableBody = document.querySelector('#flightTable tbody');
-                tableBody.innerHTML = ''; 
+                // Note: We don't clear innerHTML yet, we process first
 
                 const now = new Date();
+                let processedRows = [];
 
+                // --- 1. PROCESS & CALCULATE ---
                 flightList.forEach(row => {
-                    const tr = document.createElement('tr');
-                    
+                    // Extract Data
                     const rawDep   = row.data[1];
                     const rawEta   = row.data[5];
                     const rawCrew  = row.data[6];
                     const rawBowser= row.data[7];
 
-                    // --- CALCULATE TIMES ---
+                    // Parse Times
                     const depTimeFromSheet = parseFlightTime(rawDep);
                     const etaTime = parseFlightTime(rawEta);
                     const isBase = (typeof rawEta === 'string' && rawEta.toUpperCase().trim() === 'BASE');
 
-                    // Calculate "Effective Departure Time"
+                    // Calculate Effective Dep Time & Display Text
                     let effectiveDepTime = null;
-                    
+                    let displayDepText = "";
+                    let isCalculated = false;
+
                     if (isBase) {
                         effectiveDepTime = depTimeFromSheet;
+                        displayDepText = formatTimeDisplay(rawDep); // Show original DEP
                     } else if (etaTime) {
-                        // Add 40 minutes to ETA
+                        // Calc: ETA + 40 mins
                         effectiveDepTime = new Date(etaTime.getTime() + 40 * 60000);
+                        displayDepText = formatDateToHHMM(effectiveDepTime); // Show Calculated Time
+                        isCalculated = true;
                     } else {
                         effectiveDepTime = depTimeFromSheet;
+                        displayDepText = formatTimeDisplay(rawDep); // Show original DEP
                     }
 
-                    // --- COLOR LOGIC (Sequential Overrides) ---
-                    
+                    // Determine Color
                     let rowColor = row.color !== '#ffffff' ? row.color : '#ffffff'; 
 
-                    // 1. Blue Logic (ETA/Base)
+                    // Priority 1: Blue (ETA/Base)
                     if (isBase && depTimeFromSheet) {
                         const diffMins = (depTimeFromSheet - now) / (1000 * 60);
                         if (diffMins <= 75) rowColor = '#e1f5fe'; 
-                    } 
-                    else if (etaTime) {
+                    } else if (etaTime) {
                         const diffMins = (etaTime - now) / (1000 * 60);
                         if (diffMins <= 15) rowColor = '#e1f5fe'; 
                     }
 
-                    // 2. Crew Logic (Yellow)
+                    // Priority 2: Yellow (Crew)
                     if (rawCrew && rawCrew.toString().trim() !== "") {
                         rowColor = '#fff9c4'; 
                     }
 
-                    // 3. Bowser Logic (Green)
+                    // Priority 3: Green (Bowser)
                     if (rawBowser && rawBowser.toString().trim() !== "") {
                         rowColor = '#dcedc8'; 
                     }
 
-                    // 4. Departure Logic (Red)
+                    // Priority 4: Red (Departure Alert)
                     if (effectiveDepTime) {
                         const diffMins = (effectiveDepTime - now) / (1000 * 60);
                         if (diffMins <= 15) {
@@ -199,33 +205,49 @@
                         }
                     }
 
-                    tr.style.backgroundColor = rowColor;
+                    // Push to array for sorting
+                    processedRows.push({
+                        originalData: row.data,
+                        effectiveDepTime: effectiveDepTime,
+                        displayDepText: displayDepText,
+                        isCalculated: isCalculated,
+                        finalColor: rowColor
+                    });
+                });
 
-                    // --- RENDER CELLS ---
-                    row.data.forEach((cellData, index) => {
+                // --- 2. SORT ROWS (Earliest Departure First) ---
+                processedRows.sort((a, b) => {
+                    // If time is missing, push to bottom
+                    if (!a.effectiveDepTime) return 1;
+                    if (!b.effectiveDepTime) return -1;
+                    return a.effectiveDepTime - b.effectiveDepTime;
+                });
+
+                // --- 3. RENDER TO HTML ---
+                tableBody.innerHTML = ''; 
+
+                processedRows.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.style.backgroundColor = item.finalColor;
+
+                    item.originalData.forEach((cellData, index) => {
                         const td = document.createElement('td');
-                        
-                        // DEP Column (Index 1) - REVISED LOGIC
+
+                        // DEP Column (Index 1)
                         if (index === 1) {
-                            // If it's NOT Base, and we have an ETA, show calculated time
-                            if (!isBase && etaTime && effectiveDepTime) {
-                                td.textContent = formatDateToHHMM(effectiveDepTime); // Shows ETA+40
-                                td.style.fontWeight = "bold"; // Make calculated time bold
-                            } else {
-                                td.textContent = formatTimeDisplay(cellData); // Shows Sheet Data
-                            }
+                            td.textContent = item.displayDepText;
+                            if (item.isCalculated) td.style.fontWeight = "bold";
                         } 
                         // ETA Column (Index 5)
                         else if (index === 5) {
                             td.textContent = formatTimeDisplay(cellData);
                         } 
-                        // All other columns
+                        // Other Columns
                         else {
                             td.textContent = cellData;
                         }
                         tr.appendChild(td);
                     });
-
                     tableBody.appendChild(tr);
                 });
 
