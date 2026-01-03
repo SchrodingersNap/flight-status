@@ -94,34 +94,43 @@
         const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbxZ4c88cfqMzpm4nGUs5m4cEbp5QtGtNN9lQIIFVLFsMiDFJYb6MYhnN71oNaGUE9m4PQ/exec';
         // --------------------------------------
 
-        // Helper: Convert "1415" or ISO string to Date Object
+        // Helper: Convert "10", "130", "1415" to Date Object
         function parseFlightTime(timeInput) {
-            if (!timeInput) return null;
+            if (timeInput === null || timeInput === undefined || timeInput === '') return null;
             let str = timeInput.toString().trim();
-            if (str.length === 3) str = "0" + str; 
-            if (str.length === 4 && !isNaN(str)) {
+
+            // If it is a simple number (no T, no :)
+            if (!isNaN(str) && !str.includes('T') && !str.includes(':')) {
+                // PAD WITH ZEROS: "10" -> "0010", "130" -> "0130"
+                str = str.padStart(4, '0');
+                
                 const hours = parseInt(str.substring(0, 2), 10);
                 const minutes = parseInt(str.substring(2, 4), 10);
                 const now = new Date();
                 return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
             }
+            // Fallback for ISO strings
             if (str.includes('T')) return new Date(str);
             return null;
         }
 
-        // Helper: Format raw input for display (e.g. 1415 -> 14:15)
+        // Helper: Format raw input "10" -> "00:10"
         function formatTimeDisplay(val) {
-            if (!val) return "";
-            const str = val.toString().trim();
-            if (/^\d{3,4}$/.test(str)) {
-                if(str.length === 4) return str.substring(0, 2) + ":" + str.substring(2, 4);
-                if(str.length === 3) return "0" + str.substring(0, 1) + ":" + str.substring(1, 3);
+            if (val === null || val === undefined || val === '') return "";
+            let str = val.toString().trim();
+
+            // If it is a simple number
+            if (!isNaN(str) && !str.includes('T') && !str.includes(':')) {
+                // PAD WITH ZEROS: "10" -> "0010"
+                str = str.padStart(4, '0');
+                return str.substring(0, 2) + ":" + str.substring(2, 4);
             }
+            // If ISO date
             if (str.includes('T')) return str.split('T')[1].substring(0, 5);
             return str;
         }
 
-        // Helper: Format Date Object to "14:15"
+        // Helper: Format Date Object to "HH:MM"
         function formatDateToHHMM(dateObj) {
             if (!dateObj) return "";
             let h = dateObj.getHours();
@@ -221,49 +230,3 @@
                     if (!a.effectiveDepTime) return 1;
                     if (!b.effectiveDepTime) return -1;
                     return a.effectiveDepTime - b.effectiveDepTime;
-                });
-
-                // --- 3. RENDER TO HTML ---
-                tableBody.innerHTML = ''; 
-
-                processedRows.forEach(item => {
-                    const tr = document.createElement('tr');
-                    tr.style.backgroundColor = item.finalColor;
-
-                    item.originalData.forEach((cellData, index) => {
-                        const td = document.createElement('td');
-
-                        // DEP Column (Index 1)
-                        if (index === 1) {
-                            td.textContent = item.displayDepText;
-                            if (item.isCalculated) td.style.fontWeight = "bold";
-                        } 
-                        // ETA Column (Index 5)
-                        else if (index === 5) {
-                            td.textContent = formatTimeDisplay(cellData);
-                        } 
-                        // Other Columns
-                        else {
-                            td.textContent = cellData;
-                        }
-                        tr.appendChild(td);
-                    });
-                    tableBody.appendChild(tr);
-                });
-
-                statusMsg.textContent = 'Last updated: ' + now.toLocaleTimeString();
-                statusMsg.style.color = '#666';
-
-            } catch (error) {
-                console.error('Error:', error);
-                statusMsg.textContent = 'Error loading data.';
-                statusMsg.style.color = 'red';
-            }
-        }
-
-        fetchFlightData();
-        setInterval(fetchFlightData, 30000); 
-    </script>
-
-</body>
-</html>
