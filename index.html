@@ -5,132 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flight Status Board</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 20px;
-            overflow: hidden; 
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 5px;
-            font-size: 24px;
-        }
-        .last-updated {
-            text-align: center;
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 15px;
-        }
-        
-        /* Table Container */
-        .table-container {
-            height: 85vh; 
-            overflow: auto; 
-            border: 1px solid #999;
-            background-color: white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: separate; 
-            border-spacing: 0;
-        }
-        
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #999; 
-            border-right: 1px solid #999;
-            font-size: 14px;
-        }
-
-        /* Sticky Header */
-        th {
-            background-color: #333;
-            color: white;
-            position: sticky;
-            top: 0; 
-            z-index: 2; 
-            border-top: none;
-        }
-
-        @media screen and (max-width: 600px) {
-            table { font-size: 11px; }
-            th, td { padding: 8px; }
-            .table-container { height: 80vh; } 
-        }
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 20px; overflow: hidden; }
+        h1 { text-align: center; color: #333; margin-bottom: 5px; font-size: 24px; }
+        .last-updated { text-align: center; font-size: 12px; color: #666; margin-bottom: 15px; }
+        .error-log { color: red; text-align: center; font-weight: bold; font-size: 14px; background: #ffe6e6; padding: 10px; border: 1px solid red; display: none;}
+        .table-container { height: 85vh; overflow: auto; border: 1px solid #999; background-color: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #999; border-right: 1px solid #999; font-size: 14px; }
+        th { background-color: #333; color: white; position: sticky; top: 0; z-index: 2; border-top: none; }
+        @media screen and (max-width: 600px) { table { font-size: 11px; } th, td { padding: 8px; } .table-container { height: 80vh; } }
     </style>
 </head>
 <body>
 
     <h1>Flight Dep & Sector Status</h1>
     <div class="last-updated" id="statusMsg">Loading data...</div>
+    <div id="errorLog" class="error-log"></div>
 
     <div class="table-container">
         <table id="flightTable">
             <thead>
                 <tr>
-                    <th>Flight</th>
-                    <th>Dep</th>
-                    <th>Sector</th>
-                    <th>Call Sign</th>
-                    <th>Bay</th>
-                    <th>ETA</th>
-                    <th>Crew</th>
-                    <th>Bowser</th>
-                    <th>Comment</th>
+                    <th>Flight</th><th>Dep</th><th>Sector</th><th>Call Sign</th><th>Bay</th><th>ETA</th><th>Crew</th><th>Bowser</th><th>Comment</th>
                 </tr>
             </thead>
-            <tbody>
-                </tbody>
+            <tbody></tbody>
         </table>
     </div>
 
     <script>
         // --- PASTE YOUR DEPLOYMENT URL HERE ---
-        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbzXEzeLSUlW6zlrZYeR7iq1lJ0032l-POTN2-_SAOGAqoHgCSewG3CLjQ0GZT0WTNpjXw/exec';
+        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbzNLTBZUffueFTgFPi8aadl6PDXhmF0BDkchJ5tcuQdK06F3aMkPPY9ZtJ3hfSaWvIWLg/exec';
         // --------------------------------------
 
-        // Helper: Convert "10", "130", "1415" to Date Object
         function parseFlightTime(timeInput) {
             if (timeInput === null || timeInput === undefined || timeInput === '') return null;
             let str = timeInput.toString().trim();
-
-            // If it is a simple number (no T, no :)
             if (!isNaN(str) && !str.includes('T') && !str.includes(':')) {
-                // PAD WITH ZEROS: "10" -> "0010", "130" -> "0130"
                 str = str.padStart(4, '0');
-                
                 const hours = parseInt(str.substring(0, 2), 10);
                 const minutes = parseInt(str.substring(2, 4), 10);
                 const now = new Date();
                 return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
             }
-            // Fallback for ISO strings
             if (str.includes('T')) return new Date(str);
             return null;
         }
 
-        // Helper: Format raw input "10" -> "00:10"
         function formatTimeDisplay(val) {
             if (val === null || val === undefined || val === '') return "";
             let str = val.toString().trim();
-
-            // If it is a simple number
             if (!isNaN(str) && !str.includes('T') && !str.includes(':')) {
-                // PAD WITH ZEROS: "10" -> "0010"
                 str = str.padStart(4, '0');
                 return str.substring(0, 2) + ":" + str.substring(2, 4);
             }
-            // If ISO date
             if (str.includes('T')) return str.split('T')[1].substring(0, 5);
             return str;
         }
 
-        // Helper: Format Date Object to "HH:MM"
         function formatDateToHHMM(dateObj) {
             if (!dateObj) return "";
             let h = dateObj.getHours();
@@ -142,79 +74,65 @@
 
         async function fetchFlightData() {
             const statusMsg = document.getElementById('statusMsg');
+            const errorLog = document.getElementById('errorLog');
             
             try {
                 const response = await fetch(SHEET_API_URL);
+                if (!response.ok) throw new Error("Network response was not ok");
+                
                 const flightList = await response.json();
                 
-                const tableBody = document.querySelector('#flightTable tbody');
-                // Note: We don't clear innerHTML yet, we process first
+                // DEBUG: Check if data format is correct
+                if (!Array.isArray(flightList)) throw new Error("Data received is not a list.");
+                if (flightList.length > 0 && !flightList[0].data) {
+                    throw new Error("MISMATCH: Google Script is sending OLD format. Please update Script.");
+                }
 
+                const tableBody = document.querySelector('#flightTable tbody');
                 const now = new Date();
                 let processedRows = [];
 
-                // --- 1. PROCESS & CALCULATE ---
                 flightList.forEach(row => {
-                    // Extract Data
                     const rawDep   = row.data[1];
                     const rawEta   = row.data[5];
                     const rawCrew  = row.data[6];
                     const rawBowser= row.data[7];
 
-                    // Parse Times
                     const depTimeFromSheet = parseFlightTime(rawDep);
                     const etaTime = parseFlightTime(rawEta);
                     const isBase = (typeof rawEta === 'string' && rawEta.toUpperCase().trim() === 'BASE');
 
-                    // Calculate Effective Dep Time & Display Text
                     let effectiveDepTime = null;
                     let displayDepText = "";
                     let isCalculated = false;
 
                     if (isBase) {
                         effectiveDepTime = depTimeFromSheet;
-                        displayDepText = formatTimeDisplay(rawDep); // Show original DEP
+                        displayDepText = formatTimeDisplay(rawDep);
                     } else if (etaTime) {
-                        // Calc: ETA + 40 mins
                         effectiveDepTime = new Date(etaTime.getTime() + 40 * 60000);
-                        displayDepText = formatDateToHHMM(effectiveDepTime); // Show Calculated Time
+                        displayDepText = formatDateToHHMM(effectiveDepTime);
                         isCalculated = true;
                     } else {
                         effectiveDepTime = depTimeFromSheet;
-                        displayDepText = formatTimeDisplay(rawDep); // Show original DEP
+                        displayDepText = formatTimeDisplay(rawDep);
                     }
 
-                    // Determine Color
                     let rowColor = row.color !== '#ffffff' ? row.color : '#ffffff'; 
 
-                    // Priority 1: Blue (ETA/Base)
                     if (isBase && depTimeFromSheet) {
-                        const diffMins = (depTimeFromSheet - now) / (1000 * 60);
-                        if (diffMins <= 75) rowColor = '#e1f5fe'; 
+                        if ((depTimeFromSheet - now) / 60000 <= 75) rowColor = '#e1f5fe'; 
                     } else if (etaTime) {
-                        const diffMins = (etaTime - now) / (1000 * 60);
-                        if (diffMins <= 15) rowColor = '#e1f5fe'; 
+                        if ((etaTime - now) / 60000 <= 15) rowColor = '#e1f5fe'; 
                     }
 
-                    // Priority 2: Yellow (Crew)
-                    if (rawCrew && rawCrew.toString().trim() !== "") {
-                        rowColor = '#fff9c4'; 
-                    }
-
-                    // Priority 3: Green (Bowser)
-                    if (rawBowser && rawBowser.toString().trim() !== "") {
-                        rowColor = '#dcedc8'; 
-                    }
-
-                    // Priority 4: Red (Departure Alert)
+                    if (rawCrew && rawCrew.toString().trim() !== "") rowColor = '#fff9c4'; 
+                    if (rawBowser && rawBowser.toString().trim() !== "") rowColor = '#dcedc8'; 
+                    
                     if (effectiveDepTime) {
-                        const diffMins = (effectiveDepTime - now) / (1000 * 60);
-                        if (diffMins <= 15) {
-                            rowColor = '#ffcdd2'; 
-                        }
+                        if ((effectiveDepTime - now) / 60000 <= 15) rowColor = '#ffcdd2'; 
                     }
 
-                    // Push to array for sorting
                     processedRows.push({
                         originalData: row.data,
                         effectiveDepTime: effectiveDepTime,
@@ -224,9 +142,46 @@
                     });
                 });
 
-                // --- 2. SORT ROWS (Earliest Departure First) ---
                 processedRows.sort((a, b) => {
-                    // If time is missing, push to bottom
                     if (!a.effectiveDepTime) return 1;
                     if (!b.effectiveDepTime) return -1;
                     return a.effectiveDepTime - b.effectiveDepTime;
+                });
+
+                tableBody.innerHTML = ''; 
+
+                processedRows.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.style.backgroundColor = item.finalColor;
+                    item.originalData.forEach((cellData, index) => {
+                        const td = document.createElement('td');
+                        if (index === 1) {
+                            td.textContent = item.displayDepText;
+                            if (item.isCalculated) td.style.fontWeight = "bold";
+                        } else if (index === 5) {
+                            td.textContent = formatTimeDisplay(cellData);
+                        } else {
+                            td.textContent = cellData;
+                        }
+                        tr.appendChild(td);
+                    });
+                    tableBody.appendChild(tr);
+                });
+
+                statusMsg.textContent = 'Last updated: ' + now.toLocaleTimeString();
+                errorLog.style.display = 'none';
+
+            } catch (error) {
+                console.error('Error:', error);
+                statusMsg.textContent = 'STOPPED';
+                errorLog.style.display = 'block';
+                errorLog.textContent = 'ERROR: ' + error.message;
+            }
+        }
+
+        fetchFlightData();
+        setInterval(fetchFlightData, 30000); 
+    </script>
+
+</body>
+</html>
