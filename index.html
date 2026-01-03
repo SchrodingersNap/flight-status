@@ -3,67 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flight Status Board</title>
+    <title>Flight Dashboard</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 20px; overflow: hidden; }
-        h1 { text-align: center; color: #333; margin-bottom: 5px; font-size: 24px; }
-        .last-updated { text-align: center; font-size: 12px; color: #666; margin-bottom: 15px; }
-        .error-log { color: red; text-align: center; font-weight: bold; font-size: 14px; background: #ffe6e6; padding: 10px; border: 1px solid red; display: none;}
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 10px; overflow-y: auto; }
         
-        .table-container { height: 85vh; overflow: auto; border: 1px solid #999; background-color: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        /* HEADER */
+        h1 { text-align: center; color: #333; margin: 5px 0; font-size: 22px; }
+        .last-updated { text-align: center; font-size: 12px; color: #666; margin-bottom: 10px; }
+        .error-log { color: red; text-align: center; font-weight: bold; background: #ffe6e6; padding: 5px; display: none; margin-bottom: 10px;}
+
+        /* LAYOUT GRID */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Default to single column */
+            gap: 15px;
+        }
+
+        /* TABLE STYLES */
+        .panel { background: white; border: 1px solid #ccc; box-shadow: 0 0 5px rgba(0,0,0,0.1); padding: 5px; display: flex; flex-direction: column; }
+        .panel-header { background: #333; color: white; padding: 8px; font-weight: bold; text-align: center; font-size: 16px; margin-bottom: 5px; }
+
+        .table-scroll { overflow: auto; flex-grow: 1; }
         
-        table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #999; border-right: 1px solid #999; font-size: 14px; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; }
+        th { background-color: #444; color: white; position: sticky; top: 0; z-index: 2; border-top: none; font-size: 12px; }
+        tr:last-child td { border-bottom: none; }
         
-        /* Sticky Header */
-        th { background-color: #333; color: white; position: sticky; top: 0; z-index: 2; border-top: none; }
-        
-        /* Italic style for diverted flights */
+        /* Divert Style */
         .diverted-text { font-style: italic; font-weight: bold; color: #444; }
 
-        @media screen and (max-width: 600px) { table { font-size: 11px; } th, td { padding: 8px; } .table-container { height: 80vh; } }
+        /* HEIGHTS */
+        #mainBoardPanel { height: 55vh; }
+        #bottomSection { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; height: 35vh; }
+        
+        @media screen and (max-width: 800px) {
+            #mainBoardPanel { height: 50vh; }
+            #bottomSection { grid-template-columns: 1fr; height: auto; }
+            .panel { height: 40vh; margin-bottom: 10px;}
+        }
     </style>
 </head>
 <body>
 
-    <h1>Flight Dep & Sector Status</h1>
+    <h1>Flight Operations Dashboard</h1>
     <div class="last-updated" id="statusMsg">Loading data...</div>
     <div id="errorLog" class="error-log"></div>
 
-    <div class="table-container">
-        <table id="flightTable">
-            <thead>
-                <tr>
-                    <th>Flight</th><th>Dep</th><th>Sector</th><th>Call Sign</th><th>Bay</th><th>ETA</th><th>Crew</th><th>Bowser</th><th>Comment</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+    <div class="panel" id="mainBoardPanel">
+        <div class="table-scroll">
+            <table id="flightTable">
+                <thead>
+                    <tr>
+                        <th>Flight</th><th>Dep</th><th>Sector</th><th>Call Sign</th><th>Bay</th><th>ETA</th><th>Crew</th><th>Bowser</th><th>Comment</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="bottomSection">
+        
+        <div class="panel">
+            <div class="panel-header">Operator Turns</div>
+            <div class="table-scroll">
+                <table id="operatorTable">
+                    <thead>
+                        <tr>
+                            <th>Col J</th><th>Col K</th><th>Col L</th><th>Col M</th>
+                            <th>Col N</th><th>Col O</th><th>Col P</th><th>Col Q</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">Crew Assignments</div>
+            <div class="table-scroll">
+                <table id="crewTable">
+                    <thead>
+                        <tr>
+                            <th>Crew Name</th>
+                            <th>Assigned Flights</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
     <script>
         // --- PASTE YOUR NEW DEPLOYMENT URL HERE ---
-        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbyqOe-sh6W6InbhTwr_U0odlo5T9aWDak1SoDawQxajTrtYlq-woxIX4SO8UU8UsHP8Tw/exec';
+        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbw51mJKGMCzvXJCU0EO48W_nW7tq2ruxrFPz5obalGEk7HJNrGgCcBByHi4HV_dDIw_ng/exec';
         // ------------------------------------------
 
-        // Helper: Convert "10", "1415", ISO to Date Object
+        // --- TIME HELPERS ---
         function parseFlightTime(timeInput) {
-            if (timeInput === null || timeInput === undefined || timeInput === '') return null;
+            if (!timeInput) return null;
             let str = timeInput.toString().trim();
             if (!isNaN(str) && !str.includes('T') && !str.includes(':')) {
                 str = str.padStart(4, '0');
-                const hours = parseInt(str.substring(0, 2), 10);
-                const minutes = parseInt(str.substring(2, 4), 10);
                 const now = new Date();
-                return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
+                return new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(str.substring(0,2)), parseInt(str.substring(2,4)));
             }
             if (str.includes('T')) return new Date(str);
             return null;
         }
 
-        // Helper: Display "1415" as "14:15"
         function formatTimeDisplay(val) {
-            if (val === null || val === undefined || val === '') return "";
+            if (!val) return "";
             let str = val.toString().trim();
             if (!isNaN(str) && !str.includes('T') && !str.includes(':')) {
                 str = str.padStart(4, '0');
@@ -73,150 +126,37 @@
             return str;
         }
 
-        // Helper: Date Object -> "14:15"
         function formatDateToHHMM(dateObj) {
             if (!dateObj) return "";
-            let h = dateObj.getHours();
-            let m = dateObj.getMinutes();
-            const hStr = h < 10 ? "0" + h : h;
-            const mStr = m < 10 ? "0" + m : m;
-            return hStr + ":" + mStr;
+            let h = dateObj.getHours(); let m = dateObj.getMinutes();
+            return (h<10?"0"+h:h) + ":" + (m<10?"0"+m:m);
         }
 
-        async function fetchFlightData() {
+        // --- MAIN FETCH FUNCTION ---
+        async function fetchData() {
             const statusMsg = document.getElementById('statusMsg');
             const errorLog = document.getElementById('errorLog');
-            
+
             try {
                 const response = await fetch(SHEET_API_URL);
                 if (!response.ok) throw new Error("Network response was not ok");
                 
-                const flightList = await response.json();
-                const tableBody = document.querySelector('#flightTable tbody');
+                const jsonResponse = await response.json();
+                
+                // The new script returns { flights: [], operators: [] }
+                const flightList = jsonResponse.flights || []; 
+                const operatorList = jsonResponse.operators || [];
+
                 const now = new Date();
-                let processedRows = [];
+                
+                // --- 1. RENDER MAIN FLIGHT TABLE ---
+                renderFlightTable(flightList, now);
 
-                flightList.forEach(row => {
-                    // Extract Cols 0-8
-                    const rawDep   = row.data[1];
-                    const rawEta   = row.data[5];
-                    const rawCrew  = row.data[6];
-                    const rawBowser= row.data[7];
-                    const rawComment = row.data[8] ? row.data[8].toString() : "";
+                // --- 2. RENDER OPERATOR TABLE ---
+                renderOperatorTable(operatorList);
 
-                    const depTimeFromSheet = parseFlightTime(rawDep);
-                    const etaTime = parseFlightTime(rawEta);
-
-                    // Check Keywords
-                    const etaString = (typeof rawEta === 'string') ? rawEta.toUpperCase().trim() : "";
-                    const isBaseOrLanded = (etaString === 'BASE' || etaString === 'LANDED');
-                    
-                    // Check Divert
-                    const isDivert = rawComment.toLowerCase().includes('divert');
-
-                    // --- CALCULATION LOGIC ---
-                    let effectiveDepTime = null;
-                    let displayDepText = "";
-                    let isCalculated = false;
-
-                    // 1. If "Base" or "Landed" -> Keep Original DEP
-                    if (isBaseOrLanded) {
-                        effectiveDepTime = depTimeFromSheet;
-                        displayDepText = formatTimeDisplay(rawDep);
-                    }
-                    // 2. If ETA exists (and is a time) -> DEP = ETA + 40 mins
-                    else if (etaTime) {
-                        effectiveDepTime = new Date(etaTime.getTime() + 40 * 60000);
-                        displayDepText = formatDateToHHMM(effectiveDepTime);
-                        isCalculated = true;
-                    }
-                    // 3. No ETA -> Check for Delay (Within 60 mins)
-                    else {
-                        if (depTimeFromSheet) {
-                            const diffMins = (depTimeFromSheet - now) / 60000;
-                            // If we are within 60 mins of departure (and haven't passed it by too much)
-                            // We add 30 mins delay
-                            if (diffMins <= 60 && diffMins > -100) {
-                                effectiveDepTime = new Date(depTimeFromSheet.getTime() + 30 * 60000);
-                                displayDepText = formatDateToHHMM(effectiveDepTime);
-                                isCalculated = true; // Highlight that it changed
-                            } else {
-                                effectiveDepTime = depTimeFromSheet;
-                                displayDepText = formatTimeDisplay(rawDep);
-                            }
-                        }
-                    }
-
-                    // --- COLOR LOGIC ---
-                    let rowColor = row.color !== '#ffffff' ? row.color : '#ffffff'; 
-
-                    // Priority 3: Yellow (Crew)
-                    if (rawCrew && rawCrew.toString().trim() !== "") {
-                        rowColor = '#fff9c4'; 
-                    }
-
-                    // Priority 2: Green (Bowser) - Overrides Yellow
-                    if (rawBowser && rawBowser.toString().trim() !== "") {
-                        rowColor = '#dcedc8'; 
-                    }
-
-                    // Priority 1: Light Red (DEP - 10 Minutes) - Overrides All
-                    if (effectiveDepTime) {
-                        const minsToDep = (effectiveDepTime - now) / 60000;
-                        if (minsToDep <= 10) {
-                            rowColor = '#ffcdd2'; 
-                        }
-                    }
-
-                    processedRows.push({
-                        originalData: row.data,
-                        effectiveDepTime: effectiveDepTime,
-                        displayDepText: displayDepText,
-                        isCalculated: isCalculated,
-                        finalColor: rowColor,
-                        isDivert: isDivert
-                    });
-                });
-
-                // --- SORTING (Increasing Effective DEP) ---
-                processedRows.sort((a, b) => {
-                    if (!a.effectiveDepTime) return 1;
-                    if (!b.effectiveDepTime) return -1;
-                    return a.effectiveDepTime - b.effectiveDepTime;
-                });
-
-                // --- RENDERING ---
-                tableBody.innerHTML = ''; 
-
-                processedRows.forEach(item => {
-                    const tr = document.createElement('tr');
-                    tr.style.backgroundColor = item.finalColor;
-                    
-                    // Apply Italic class if Divert
-                    if (item.isDivert) {
-                        tr.classList.add('diverted-text');
-                    }
-
-                    item.originalData.forEach((cellData, index) => {
-                        const td = document.createElement('td');
-                        
-                        // DEP Column
-                        if (index === 1) {
-                            td.textContent = item.displayDepText;
-                            if (item.isCalculated) td.style.fontWeight = "bold";
-                        } 
-                        // ETA Column
-                        else if (index === 5) {
-                            td.textContent = formatTimeDisplay(cellData);
-                        } 
-                        // Other Columns
-                        else {
-                            td.textContent = cellData;
-                        }
-                        tr.appendChild(td);
-                    });
-                    tableBody.appendChild(tr);
-                });
+                // --- 3. RENDER CREW SUMMARY ---
+                renderCrewSummary(flightList);
 
                 statusMsg.textContent = 'Last updated: ' + now.toLocaleTimeString();
                 errorLog.style.display = 'none';
@@ -229,9 +169,164 @@
             }
         }
 
-        fetchFlightData();
-        setInterval(fetchFlightData, 30000); 
-    </script>
+        function renderFlightTable(list, now) {
+            const tbody = document.querySelector('#flightTable tbody');
+            let processedRows = [];
 
+            list.forEach(row => {
+                const rawDep = row.data[1];
+                const rawEta = row.data[5];
+                const rawCrew = row.data[6];
+                const rawBowser = row.data[7];
+                const rawComment = row.data[8] ? row.data[8].toString() : "";
+
+                const depTime = parseFlightTime(rawDep);
+                const etaTime = parseFlightTime(rawEta);
+                const etaString = (typeof rawEta === 'string') ? rawEta.toUpperCase().trim() : "";
+                const isBaseOrLanded = (etaString === 'BASE' || etaString === 'LANDED');
+                const isDivert = rawComment.toLowerCase().includes('divert');
+
+                let effectiveDepTime = null;
+                let displayDepText = "";
+                let isCalculated = false;
+
+                // Calculation Logic
+                if (isBaseOrLanded) {
+                    effectiveDepTime = depTime;
+                    displayDepText = formatTimeDisplay(rawDep);
+                } else if (etaTime) {
+                    effectiveDepTime = new Date(etaTime.getTime() + 40 * 60000);
+                    displayDepText = formatDateToHHMM(effectiveDepTime);
+                    isCalculated = true;
+                } else {
+                    if (depTime) {
+                        const diffMins = (depTime - now) / 60000;
+                        // Delay logic: if within 60 mins, add 30 mins
+                        if (diffMins <= 60 && diffMins > -100) {
+                            effectiveDepTime = new Date(depTime.getTime() + 30 * 60000);
+                            displayDepText = formatDateToHHMM(effectiveDepTime);
+                            isCalculated = true;
+                        } else {
+                            effectiveDepTime = depTime;
+                            displayDepText = formatTimeDisplay(rawDep);
+                        }
+                    }
+                }
+
+                // Color Logic
+                let rowColor = row.color !== '#ffffff' ? row.color : '#ffffff'; 
+                if (rawCrew) rowColor = '#fff9c4'; // Yellow
+                if (rawBowser) rowColor = '#dcedc8'; // Green
+                
+                if (effectiveDepTime) {
+                    const minsToDep = (effectiveDepTime - now) / 60000;
+                    if (minsToDep <= 10) rowColor = '#ffcdd2'; // Red
+                }
+
+                processedRows.push({
+                    originalData: row.data,
+                    effectiveDepTime: effectiveDepTime,
+                    displayDepText: displayDepText,
+                    isCalculated: isCalculated,
+                    finalColor: rowColor,
+                    isDivert: isDivert
+                });
+            });
+
+            // Sorting
+            processedRows.sort((a, b) => {
+                if (!a.effectiveDepTime) return 1;
+                if (!b.effectiveDepTime) return -1;
+                return a.effectiveDepTime - b.effectiveDepTime;
+            });
+
+            // HTML Generation
+            tbody.innerHTML = '';
+            processedRows.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.style.backgroundColor = item.finalColor;
+                if (item.isDivert) tr.classList.add('diverted-text');
+
+                item.originalData.forEach((cellData, index) => {
+                    const td = document.createElement('td');
+                    if (index === 1) {
+                        td.textContent = item.displayDepText;
+                        if (item.isCalculated) td.style.fontWeight = "bold";
+                    } else if (index === 5) {
+                        td.textContent = formatTimeDisplay(cellData);
+                    } else {
+                        td.textContent = cellData;
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderOperatorTable(list) {
+            const tbody = document.querySelector('#operatorTable tbody');
+            tbody.innerHTML = '';
+            list.forEach(rowObj => {
+                const tr = document.createElement('tr');
+                // Loop through operator columns (J to Q is 8 columns)
+                rowObj.data.forEach(cell => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderCrewSummary(flightList) {
+            const tbody = document.querySelector('#crewTable tbody');
+            const crewMap = {};
+
+            // Aggregate Data
+            flightList.forEach(row => {
+                const flightNum = row.data[0]; // Col A
+                const crewName = row.data[6];  // Col G
+                
+                if (crewName && crewName.toString().trim() !== "") {
+                    const name = crewName.toString().trim();
+                    if (!crewMap[name]) {
+                        crewMap[name] = [];
+                    }
+                    crewMap[name].push(flightNum);
+                }
+            });
+
+            // Render
+            tbody.innerHTML = '';
+            // Convert map to array to sort nicely
+            const sortedCrew = Object.keys(crewMap).sort();
+            
+            if (sortedCrew.length === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<td colspan="2" style="text-align:center; color:#999;">No crew assigned yet</td>';
+                tbody.appendChild(tr);
+                return;
+            }
+
+            sortedCrew.forEach(name => {
+                const tr = document.createElement('tr');
+                
+                const tdName = document.createElement('td');
+                tdName.textContent = name;
+                tdName.style.fontWeight = 'bold';
+                
+                const tdFlights = document.createElement('td');
+                tdFlights.textContent = crewMap[name].join(', ');
+                
+                tr.appendChild(tdName);
+                tr.appendChild(tdFlights);
+                tbody.appendChild(tr);
+            });
+        }
+
+        fetchData();
+        setInterval(fetchData, 30000);
+
+    </script>
 </body>
 </html>
