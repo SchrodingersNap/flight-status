@@ -9,10 +9,18 @@
         h1 { text-align: center; color: #333; margin-bottom: 5px; font-size: 24px; }
         .last-updated { text-align: center; font-size: 12px; color: #666; margin-bottom: 15px; }
         .error-log { color: red; text-align: center; font-weight: bold; font-size: 14px; background: #ffe6e6; padding: 10px; border: 1px solid red; display: none;}
+        
         .table-container { height: 85vh; overflow: auto; border: 1px solid #999; background-color: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        
         table { width: 100%; border-collapse: separate; border-spacing: 0; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #999; border-right: 1px solid #999; font-size: 14px; }
+        
+        /* Sticky Header */
         th { background-color: #333; color: white; position: sticky; top: 0; z-index: 2; border-top: none; }
+        
+        /* Italic style for diverted flights */
+        .diverted-text { font-style: italic; font-weight: bold; color: #444; }
+
         @media screen and (max-width: 600px) { table { font-size: 11px; } th, td { padding: 8px; } .table-container { height: 80vh; } }
     </style>
 </head>
@@ -34,10 +42,11 @@
     </div>
 
     <script>
-        // --- PASTE YOUR DEPLOYMENT URL HERE ---
-        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbzNLTBZUffueFTgFPi8aadl6PDXhmF0BDkchJ5tcuQdK06F3aMkPPY9ZtJ3hfSaWvIWLg/exec';
-        // --------------------------------------
+        // --- PASTE YOUR NEW DEPLOYMENT URL HERE ---
+        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbyqOe-sh6W6InbhTwr_U0odlo5T9aWDak1SoDawQxajTrtYlq-woxIX4SO8UU8UsHP8Tw/exec';
+        // ------------------------------------------
 
+        // Helper: Convert "10", "1415", ISO to Date Object
         function parseFlightTime(timeInput) {
             if (timeInput === null || timeInput === undefined || timeInput === '') return null;
             let str = timeInput.toString().trim();
@@ -52,6 +61,7 @@
             return null;
         }
 
+        // Helper: Display "1415" as "14:15"
         function formatTimeDisplay(val) {
             if (val === null || val === undefined || val === '') return "";
             let str = val.toString().trim();
@@ -63,6 +73,7 @@
             return str;
         }
 
+        // Helper: Date Object -> "14:15"
         function formatDateToHHMM(dateObj) {
             if (!dateObj) return "";
             let h = dateObj.getHours();
@@ -81,56 +92,80 @@
                 if (!response.ok) throw new Error("Network response was not ok");
                 
                 const flightList = await response.json();
-                
-                // DEBUG: Check if data format is correct
-                if (!Array.isArray(flightList)) throw new Error("Data received is not a list.");
-                if (flightList.length > 0 && !flightList[0].data) {
-                    throw new Error("MISMATCH: Google Script is sending OLD format. Please update Script.");
-                }
-
                 const tableBody = document.querySelector('#flightTable tbody');
                 const now = new Date();
                 let processedRows = [];
 
                 flightList.forEach(row => {
+                    // Extract Cols 0-8
                     const rawDep   = row.data[1];
                     const rawEta   = row.data[5];
                     const rawCrew  = row.data[6];
                     const rawBowser= row.data[7];
+                    const rawComment = row.data[8] ? row.data[8].toString() : "";
 
                     const depTimeFromSheet = parseFlightTime(rawDep);
                     const etaTime = parseFlightTime(rawEta);
-                    const isBase = (typeof rawEta === 'string' && rawEta.toUpperCase().trim() === 'BASE');
 
+                    // Check Keywords
+                    const etaString = (typeof rawEta === 'string') ? rawEta.toUpperCase().trim() : "";
+                    const isBaseOrLanded = (etaString === 'BASE' || etaString === 'LANDED');
+                    
+                    // Check Divert
+                    const isDivert = rawComment.toLowerCase().includes('divert');
+
+                    // --- CALCULATION LOGIC ---
                     let effectiveDepTime = null;
                     let displayDepText = "";
                     let isCalculated = false;
 
-                    if (isBase) {
+                    // 1. If "Base" or "Landed" -> Keep Original DEP
+                    if (isBaseOrLanded) {
                         effectiveDepTime = depTimeFromSheet;
                         displayDepText = formatTimeDisplay(rawDep);
-                    } else if (etaTime) {
+                    }
+                    // 2. If ETA exists (and is a time) -> DEP = ETA + 40 mins
+                    else if (etaTime) {
                         effectiveDepTime = new Date(etaTime.getTime() + 40 * 60000);
                         displayDepText = formatDateToHHMM(effectiveDepTime);
                         isCalculated = true;
-                    } else {
-                        effectiveDepTime = depTimeFromSheet;
-                        displayDepText = formatTimeDisplay(rawDep);
+                    }
+                    // 3. No ETA -> Check for Delay (Within 60 mins)
+                    else {
+                        if (depTimeFromSheet) {
+                            const diffMins = (depTimeFromSheet - now) / 60000;
+                            // If we are within 60 mins of departure (and haven't passed it by too much)
+                            // We add 30 mins delay
+                            if (diffMins <= 60 && diffMins > -100) {
+                                effectiveDepTime = new Date(depTimeFromSheet.getTime() + 30 * 60000);
+                                displayDepText = formatDateToHHMM(effectiveDepTime);
+                                isCalculated = true; // Highlight that it changed
+                            } else {
+                                effectiveDepTime = depTimeFromSheet;
+                                displayDepText = formatTimeDisplay(rawDep);
+                            }
+                        }
                     }
 
+                    // --- COLOR LOGIC ---
                     let rowColor = row.color !== '#ffffff' ? row.color : '#ffffff'; 
 
-                    if (isBase && depTimeFromSheet) {
-                        if ((depTimeFromSheet - now) / 60000 <= 75) rowColor = '#e1f5fe'; 
-                    } else if (etaTime) {
-                        if ((etaTime - now) / 60000 <= 15) rowColor = '#e1f5fe'; 
+                    // Priority 3: Yellow (Crew)
+                    if (rawCrew && rawCrew.toString().trim() !== "") {
+                        rowColor = '#fff9c4'; 
                     }
 
-                    if (rawCrew && rawCrew.toString().trim() !== "") rowColor = '#fff9c4'; 
-                    if (rawBowser && rawBowser.toString().trim() !== "") rowColor = '#dcedc8'; 
-                    
+                    // Priority 2: Green (Bowser) - Overrides Yellow
+                    if (rawBowser && rawBowser.toString().trim() !== "") {
+                        rowColor = '#dcedc8'; 
+                    }
+
+                    // Priority 1: Light Red (DEP - 10 Minutes) - Overrides All
                     if (effectiveDepTime) {
-                        if ((effectiveDepTime - now) / 60000 <= 15) rowColor = '#ffcdd2'; 
+                        const minsToDep = (effectiveDepTime - now) / 60000;
+                        if (minsToDep <= 10) {
+                            rowColor = '#ffcdd2'; 
+                        }
                     }
 
                     processedRows.push({
@@ -138,29 +173,44 @@
                         effectiveDepTime: effectiveDepTime,
                         displayDepText: displayDepText,
                         isCalculated: isCalculated,
-                        finalColor: rowColor
+                        finalColor: rowColor,
+                        isDivert: isDivert
                     });
                 });
 
+                // --- SORTING (Increasing Effective DEP) ---
                 processedRows.sort((a, b) => {
                     if (!a.effectiveDepTime) return 1;
                     if (!b.effectiveDepTime) return -1;
                     return a.effectiveDepTime - b.effectiveDepTime;
                 });
 
+                // --- RENDERING ---
                 tableBody.innerHTML = ''; 
 
                 processedRows.forEach(item => {
                     const tr = document.createElement('tr');
                     tr.style.backgroundColor = item.finalColor;
+                    
+                    // Apply Italic class if Divert
+                    if (item.isDivert) {
+                        tr.classList.add('diverted-text');
+                    }
+
                     item.originalData.forEach((cellData, index) => {
                         const td = document.createElement('td');
+                        
+                        // DEP Column
                         if (index === 1) {
                             td.textContent = item.displayDepText;
                             if (item.isCalculated) td.style.fontWeight = "bold";
-                        } else if (index === 5) {
+                        } 
+                        // ETA Column
+                        else if (index === 5) {
                             td.textContent = formatTimeDisplay(cellData);
-                        } else {
+                        } 
+                        // Other Columns
+                        else {
                             td.textContent = cellData;
                         }
                         tr.appendChild(td);
@@ -173,9 +223,9 @@
 
             } catch (error) {
                 console.error('Error:', error);
-                statusMsg.textContent = 'STOPPED';
+                statusMsg.textContent = 'Paused';
                 errorLog.style.display = 'block';
-                errorLog.textContent = 'ERROR: ' + error.message;
+                errorLog.textContent = 'Error: ' + error.message;
             }
         }
 
