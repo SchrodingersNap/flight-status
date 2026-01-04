@@ -37,47 +37,22 @@
         }
 
         .tab-btn:hover { background: #aaa; }
+        .tab-btn.active { background: #333; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+        /* TAB CONTENT */
+        .tab-content { display: none; flex-grow: 1; overflow: hidden; background: white; border: 1px solid #ccc; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+        .tab-content.active { display: flex; flex-direction: column; }
+
+        /* SCROLLABLE TABLE */
+        .table-scroll { overflow: auto; height: 100%; width: 100%; }
         
-        /* Active Tab Style */
-        .tab-btn.active {
-            background: #333;
-            color: white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-
-        /* TAB CONTENT AREAS */
-        .tab-content {
-            display: none; /* Hidden by default */
-            flex-grow: 1;
-            overflow: hidden; /* Handle inner scroll */
-            background: white;
-            border: 1px solid #ccc;
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
-        }
-
-        /* Show the active tab content */
-        .tab-content.active {
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* SCROLLABLE TABLE CONTAINER */
-        .table-scroll { 
-            overflow: auto; 
-            height: 100%; 
-            width: 100%;
-        }
-        
-        /* TABLE STYLES */
         table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; }
         th { background-color: #444; color: white; position: sticky; top: 0; z-index: 2; border-top: none; }
         tr:last-child td { border-bottom: none; }
         
-        /* SPECIAL STYLES */
         .diverted-text { font-style: italic; font-weight: bold; color: #444; }
         .bold-time { font-weight: bold; }
-
     </style>
 </head>
 <body>
@@ -85,7 +60,8 @@
     <div class="top-bar">
         <div class="last-updated" id="statusMsg">Initializing...</div>
         <h1>Flight Operations Dashboard</h1>
-        <div style="width: 150px;"></div> </div>
+        <div style="width: 150px;"></div> 
+    </div>
     
     <div id="errorLog" class="error-log"></div>
 
@@ -126,10 +102,7 @@
         <div class="table-scroll">
             <table id="crewTable">
                 <thead>
-                    <tr>
-                        <th style="width: 30%">Crew Name</th>
-                        <th>Assigned Flights</th>
-                    </tr>
+                    <tr><th style="width: 30%">Crew Name</th><th>Assigned Flights</th></tr>
                 </thead>
                 <tbody></tbody>
             </table>
@@ -138,29 +111,18 @@
 
     <script>
         // --- CONFIGURATION ---
-        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbyBdHNHwn-yDY49XCmAXeF9t53OLEkQwPAGvjMFNAW5Z7TvAq2ZsDgEGMS4w2KAdUSRog/exec';
-        
-        const DATA_REFRESH_RATE = 5000;   // 5 Seconds
-        const PAGE_RELOAD_RATE = 600000;  // 10 Minutes
+        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbxZ4c88cfqMzpm4nGUs5m4cEbp5QtGtNN9lQIIFVLFsMiDFJYb6MYhnN71oNaGUE9m4PQ/exec';
+        const DATA_REFRESH_RATE = 5000;
+        const PAGE_RELOAD_RATE = 600000;
 
-        // --- TAB LOGIC ---
         function openTab(tabId, btnElement) {
-            // 1. Hide all tab contents
-            const contents = document.querySelectorAll('.tab-content');
-            contents.forEach(div => div.classList.remove('active'));
-
-            // 2. Deactivate all buttons
-            const buttons = document.querySelectorAll('.tab-btn');
-            buttons.forEach(btn => btn.classList.remove('active'));
-
-            // 3. Show selected tab and activate button
+            document.querySelectorAll('.tab-content').forEach(div => div.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
-            if(btnElement) {
-                btnElement.classList.add('active');
-            }
+            if(btnElement) btnElement.classList.add('active');
         }
 
-        // --- TIME PARSING HELPERS ---
+        // --- TIME HELPERS ---
         function parseFlightTime(timeInput) {
             if (!timeInput) return null;
             let str = timeInput.toString().trim();
@@ -190,12 +152,10 @@
             return (h<10?"0"+h:h) + ":" + (m<10?"0"+m:m);
         }
 
-        // --- DATA FETCHING ---
+        // --- FETCH DATA ---
         async function fetchData() {
             const statusMsg = document.getElementById('statusMsg');
-            const errorLog = document.getElementById('errorLog');
-            
-            statusMsg.style.color = '#333'; // Visual Pulse
+            statusMsg.style.color = '#333';
 
             try {
                 const response = await fetch(SHEET_API_URL);
@@ -206,14 +166,13 @@
                 const operatorList = jsonResponse.operators || [];
                 const now = new Date();
                 
-                // Update All Tables (even hidden ones, so they are ready when clicked)
                 renderFlightTable(flightList, now);
                 renderOperatorTable(operatorList);
                 renderCrewSummary(flightList);
 
                 statusMsg.textContent = 'Last updated: ' + now.toLocaleTimeString();
                 setTimeout(() => { statusMsg.style.color = '#666'; }, 500);
-                errorLog.style.display = 'none';
+                document.getElementById('errorLog').style.display = 'none';
 
             } catch (error) {
                 console.error('Fetch Error:', error);
@@ -222,7 +181,7 @@
             }
         }
 
-        // --- RENDERERS ---
+        // --- RENDER FLIGHTS ---
         function renderFlightTable(list, now) {
             const tbody = document.querySelector('#flightTable tbody');
             let processedRows = [];
@@ -245,18 +204,33 @@
                 let displayDepText = "";
                 let isCalculated = false;
 
+                // --- 1. TIME CALCULATION LOGIC ---
                 if (isBaseOrLanded) {
                     effectiveDepTime = depTime;
                     displayDepText = formatTimeDisplay(rawDep);
                 } else if (etaTime) {
+                    // ETA + 40 mins
                     effectiveDepTime = new Date(etaTime.getTime() + 40 * 60000);
                     displayDepText = formatDateToHHMM(effectiveDepTime);
                     isCalculated = true;
                 } else {
+                    // NO ETA - AUTO DELAY LOGIC (CONTINUOUS)
                     if (depTime) {
-                        const diffMins = (depTime - now) / 60000;
-                        if (diffMins <= 60 && diffMins > -100) {
-                            effectiveDepTime = new Date(depTime.getTime() + 30 * 60000);
+                        // Start with the original or previously calculated time
+                        let tempTime = new Date(depTime.getTime());
+                        let minsUntilDep = (tempTime - now) / 60000;
+                        let changed = false;
+
+                        // WHILE the departure is within 60 mins from now (or in the past)
+                        // KEEP adding 60 minutes until it's safe.
+                        while (minsUntilDep <= 60) {
+                            tempTime = new Date(tempTime.getTime() + 60 * 60000); // Add 60 mins
+                            minsUntilDep = (tempTime - now) / 60000; // Recalculate diff
+                            changed = true;
+                        }
+
+                        if (changed) {
+                            effectiveDepTime = tempTime;
                             displayDepText = formatDateToHHMM(effectiveDepTime);
                             isCalculated = true;
                         } else {
@@ -266,6 +240,7 @@
                     }
                 }
 
+                // --- 2. COLOR LOGIC ---
                 let rowColor = row.color !== '#ffffff' ? row.color : '#ffffff'; 
                 if (rawCrew) rowColor = '#fff9c4'; 
                 if (rawBowser) rowColor = '#dcedc8'; 
@@ -313,6 +288,7 @@
             });
         }
 
+        // --- RENDER OPERATORS ---
         function renderOperatorTable(list) {
             const tbody = document.querySelector('#operatorTable tbody');
             tbody.innerHTML = '';
@@ -327,6 +303,7 @@
             });
         }
 
+        // --- RENDER CREW ---
         function renderCrewSummary(flightList) {
             const tbody = document.querySelector('#crewTable tbody');
             const crewMap = {};
@@ -334,7 +311,6 @@
             flightList.forEach(row => {
                 const flightNum = row.data[0]; 
                 const crewName = row.data[6];  
-                
                 if (crewName && crewName.toString().trim() !== "") {
                     const name = crewName.toString().trim();
                     if (!crewMap[name]) crewMap[name] = [];
@@ -357,14 +333,12 @@
                 tdName.style.fontWeight = 'bold';
                 const tdFlights = document.createElement('td');
                 tdFlights.textContent = crewMap[name].join(', ');
-                
                 tr.appendChild(tdName);
                 tr.appendChild(tdFlights);
                 tbody.appendChild(tr);
             });
         }
 
-        // --- INIT ---
         fetchData();
         setInterval(fetchData, DATA_REFRESH_RATE);
         setTimeout(() => { window.location.reload(); }, PAGE_RELOAD_RATE);
