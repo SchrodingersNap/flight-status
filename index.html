@@ -5,52 +5,97 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flight Dashboard</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 10px; overflow-y: auto; }
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 10px; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
         /* HEADER */
         h1 { text-align: center; color: #333; margin: 5px 0; font-size: 22px; }
-        .last-updated { text-align: center; font-size: 12px; color: #666; margin-bottom: 10px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 10px; }
+        .last-updated { font-size: 14px; color: #666; transition: color 0.5s ease; font-weight: bold; }
         .error-log { color: red; text-align: center; font-weight: bold; background: #ffe6e6; padding: 5px; display: none; margin-bottom: 10px;}
 
-        /* LAYOUT GRID */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr; /* Default to single column */
-            gap: 15px;
+        /* TABS NAVIGATION */
+        .tab-nav {
+            display: flex;
+            gap: 5px;
+            background: #ddd;
+            padding: 5px;
+            border-radius: 5px;
+            margin-bottom: 10px;
         }
 
-        /* TABLE STYLES */
-        .panel { background: white; border: 1px solid #ccc; box-shadow: 0 0 5px rgba(0,0,0,0.1); padding: 5px; display: flex; flex-direction: column; }
-        .panel-header { background: #333; color: white; padding: 8px; font-weight: bold; text-align: center; font-size: 16px; margin-bottom: 5px; }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: #bbb;
+            color: #333;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
 
-        .table-scroll { overflow: auto; flex-grow: 1; }
+        .tab-btn:hover { background: #aaa; }
         
-        table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
-        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; }
-        th { background-color: #444; color: white; position: sticky; top: 0; z-index: 2; border-top: none; font-size: 12px; }
+        /* Active Tab Style */
+        .tab-btn.active {
+            background: #333;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* TAB CONTENT AREAS */
+        .tab-content {
+            display: none; /* Hidden by default */
+            flex-grow: 1;
+            overflow: hidden; /* Handle inner scroll */
+            background: white;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+
+        /* Show the active tab content */
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* SCROLLABLE TABLE CONTAINER */
+        .table-scroll { 
+            overflow: auto; 
+            height: 100%; 
+            width: 100%;
+        }
+        
+        /* TABLE STYLES */
+        table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; }
+        th { background-color: #444; color: white; position: sticky; top: 0; z-index: 2; border-top: none; }
         tr:last-child td { border-bottom: none; }
         
-        /* Divert Style */
+        /* SPECIAL STYLES */
         .diverted-text { font-style: italic; font-weight: bold; color: #444; }
+        .bold-time { font-weight: bold; }
 
-        /* HEIGHTS */
-        #mainBoardPanel { height: 55vh; }
-        #bottomSection { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; height: 35vh; }
-        
-        @media screen and (max-width: 800px) {
-            #mainBoardPanel { height: 50vh; }
-            #bottomSection { grid-template-columns: 1fr; height: auto; }
-            .panel { height: 40vh; margin-bottom: 10px;}
-        }
     </style>
 </head>
 <body>
 
-    <h1>Flight Operations Dashboard</h1>
-    <div class="last-updated" id="statusMsg">Loading data...</div>
+    <div class="top-bar">
+        <div class="last-updated" id="statusMsg">Initializing...</div>
+        <h1>Flight Operations Dashboard</h1>
+        <div style="width: 150px;"></div> </div>
+    
     <div id="errorLog" class="error-log"></div>
 
-    <div class="panel" id="mainBoardPanel">
+    <div class="tab-nav">
+        <button class="tab-btn active" onclick="openTab('flights', this)">Flight Board</button>
+        <button class="tab-btn" onclick="openTab('operators', this)">Operator Turns</button>
+        <button class="tab-btn" onclick="openTab('crew', this)">Crew Summary</button>
+    </div>
+
+    <div id="flights" class="tab-content active">
         <div class="table-scroll">
             <table id="flightTable">
                 <thead>
@@ -63,46 +108,59 @@
         </div>
     </div>
 
-    <div id="bottomSection">
-        
-        <div class="panel">
-            <div class="panel-header">Operator Turns</div>
-            <div class="table-scroll">
-                <table id="operatorTable">
-                    <thead>
-                        <tr>
-                            <th>Col J</th><th>Col K</th><th>Col L</th><th>Col M</th>
-                            <th>Col N</th><th>Col O</th><th>Col P</th><th>Col Q</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
+    <div id="operators" class="tab-content">
+        <div class="table-scroll">
+            <table id="operatorTable">
+                <thead>
+                    <tr>
+                        <th>Turn 1</th><th>Turn 2</th><th>Turn 3</th><th>Turn 4</th>
+                        <th>Turn 5</th><th>Turn 6</th><th>Turn 7</th><th>Turn 8</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
+    </div>
 
-        <div class="panel">
-            <div class="panel-header">Crew Assignments</div>
-            <div class="table-scroll">
-                <table id="crewTable">
-                    <thead>
-                        <tr>
-                            <th>Crew Name</th>
-                            <th>Assigned Flights</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
+    <div id="crew" class="tab-content">
+        <div class="table-scroll">
+            <table id="crewTable">
+                <thead>
+                    <tr>
+                        <th style="width: 30%">Crew Name</th>
+                        <th>Assigned Flights</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
-
     </div>
 
     <script>
-        // --- PASTE YOUR NEW DEPLOYMENT URL HERE ---
-        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbw51mJKGMCzvXJCU0EO48W_nW7tq2ruxrFPz5obalGEk7HJNrGgCcBByHi4HV_dDIw_ng/exec';
-        // ------------------------------------------
+        // --- CONFIGURATION ---
+        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbxZ4c88cfqMzpm4nGUs5m4cEbp5QtGtNN9lQIIFVLFsMiDFJYb6MYhnN71oNaGUE9m4PQ/exec';
+        
+        const DATA_REFRESH_RATE = 5000;   // 5 Seconds
+        const PAGE_RELOAD_RATE = 600000;  // 10 Minutes
 
-        // --- TIME HELPERS ---
+        // --- TAB LOGIC ---
+        function openTab(tabId, btnElement) {
+            // 1. Hide all tab contents
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(div => div.classList.remove('active'));
+
+            // 2. Deactivate all buttons
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+
+            // 3. Show selected tab and activate button
+            document.getElementById(tabId).classList.add('active');
+            if(btnElement) {
+                btnElement.classList.add('active');
+            }
+        }
+
+        // --- TIME PARSING HELPERS ---
         function parseFlightTime(timeInput) {
             if (!timeInput) return null;
             let str = timeInput.toString().trim();
@@ -132,43 +190,39 @@
             return (h<10?"0"+h:h) + ":" + (m<10?"0"+m:m);
         }
 
-        // --- MAIN FETCH FUNCTION ---
+        // --- DATA FETCHING ---
         async function fetchData() {
             const statusMsg = document.getElementById('statusMsg');
             const errorLog = document.getElementById('errorLog');
+            
+            statusMsg.style.color = '#333'; // Visual Pulse
 
             try {
                 const response = await fetch(SHEET_API_URL);
                 if (!response.ok) throw new Error("Network response was not ok");
                 
                 const jsonResponse = await response.json();
-                
-                // The new script returns { flights: [], operators: [] }
                 const flightList = jsonResponse.flights || []; 
                 const operatorList = jsonResponse.operators || [];
-
                 const now = new Date();
                 
-                // --- 1. RENDER MAIN FLIGHT TABLE ---
+                // Update All Tables (even hidden ones, so they are ready when clicked)
                 renderFlightTable(flightList, now);
-
-                // --- 2. RENDER OPERATOR TABLE ---
                 renderOperatorTable(operatorList);
-
-                // --- 3. RENDER CREW SUMMARY ---
                 renderCrewSummary(flightList);
 
                 statusMsg.textContent = 'Last updated: ' + now.toLocaleTimeString();
+                setTimeout(() => { statusMsg.style.color = '#666'; }, 500);
                 errorLog.style.display = 'none';
 
             } catch (error) {
-                console.error('Error:', error);
-                statusMsg.textContent = 'Paused';
-                errorLog.style.display = 'block';
-                errorLog.textContent = 'Error: ' + error.message;
+                console.error('Fetch Error:', error);
+                statusMsg.textContent = 'Retrying...';
+                statusMsg.style.color = 'orange';
             }
         }
 
+        // --- RENDERERS ---
         function renderFlightTable(list, now) {
             const tbody = document.querySelector('#flightTable tbody');
             let processedRows = [];
@@ -183,6 +237,7 @@
                 const depTime = parseFlightTime(rawDep);
                 const etaTime = parseFlightTime(rawEta);
                 const etaString = (typeof rawEta === 'string') ? rawEta.toUpperCase().trim() : "";
+                
                 const isBaseOrLanded = (etaString === 'BASE' || etaString === 'LANDED');
                 const isDivert = rawComment.toLowerCase().includes('divert');
 
@@ -190,7 +245,6 @@
                 let displayDepText = "";
                 let isCalculated = false;
 
-                // Calculation Logic
                 if (isBaseOrLanded) {
                     effectiveDepTime = depTime;
                     displayDepText = formatTimeDisplay(rawDep);
@@ -201,7 +255,6 @@
                 } else {
                     if (depTime) {
                         const diffMins = (depTime - now) / 60000;
-                        // Delay logic: if within 60 mins, add 30 mins
                         if (diffMins <= 60 && diffMins > -100) {
                             effectiveDepTime = new Date(depTime.getTime() + 30 * 60000);
                             displayDepText = formatDateToHHMM(effectiveDepTime);
@@ -213,14 +266,13 @@
                     }
                 }
 
-                // Color Logic
                 let rowColor = row.color !== '#ffffff' ? row.color : '#ffffff'; 
-                if (rawCrew) rowColor = '#fff9c4'; // Yellow
-                if (rawBowser) rowColor = '#dcedc8'; // Green
+                if (rawCrew) rowColor = '#fff9c4'; 
+                if (rawBowser) rowColor = '#dcedc8'; 
                 
                 if (effectiveDepTime) {
                     const minsToDep = (effectiveDepTime - now) / 60000;
-                    if (minsToDep <= 10) rowColor = '#ffcdd2'; // Red
+                    if (minsToDep <= 10) rowColor = '#ffcdd2'; 
                 }
 
                 processedRows.push({
@@ -233,14 +285,12 @@
                 });
             });
 
-            // Sorting
             processedRows.sort((a, b) => {
                 if (!a.effectiveDepTime) return 1;
                 if (!b.effectiveDepTime) return -1;
                 return a.effectiveDepTime - b.effectiveDepTime;
             });
 
-            // HTML Generation
             tbody.innerHTML = '';
             processedRows.forEach(item => {
                 const tr = document.createElement('tr');
@@ -249,10 +299,10 @@
 
                 item.originalData.forEach((cellData, index) => {
                     const td = document.createElement('td');
-                    if (index === 1) {
+                    if (index === 1) { 
                         td.textContent = item.displayDepText;
-                        if (item.isCalculated) td.style.fontWeight = "bold";
-                    } else if (index === 5) {
+                        if (item.isCalculated) td.classList.add('bold-time');
+                    } else if (index === 5) { 
                         td.textContent = formatTimeDisplay(cellData);
                     } else {
                         td.textContent = cellData;
@@ -268,7 +318,6 @@
             tbody.innerHTML = '';
             list.forEach(rowObj => {
                 const tr = document.createElement('tr');
-                // Loop through operator columns (J to Q is 8 columns)
                 rowObj.data.forEach(cell => {
                     const td = document.createElement('td');
                     td.textContent = cell;
@@ -282,39 +331,30 @@
             const tbody = document.querySelector('#crewTable tbody');
             const crewMap = {};
 
-            // Aggregate Data
             flightList.forEach(row => {
-                const flightNum = row.data[0]; // Col A
-                const crewName = row.data[6];  // Col G
+                const flightNum = row.data[0]; 
+                const crewName = row.data[6];  
                 
                 if (crewName && crewName.toString().trim() !== "") {
                     const name = crewName.toString().trim();
-                    if (!crewMap[name]) {
-                        crewMap[name] = [];
-                    }
+                    if (!crewMap[name]) crewMap[name] = [];
                     crewMap[name].push(flightNum);
                 }
             });
 
-            // Render
             tbody.innerHTML = '';
-            // Convert map to array to sort nicely
             const sortedCrew = Object.keys(crewMap).sort();
             
             if (sortedCrew.length === 0) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = '<td colspan="2" style="text-align:center; color:#999;">No crew assigned yet</td>';
-                tbody.appendChild(tr);
+                tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#999;">No crew assigned</td></tr>';
                 return;
             }
 
             sortedCrew.forEach(name => {
                 const tr = document.createElement('tr');
-                
                 const tdName = document.createElement('td');
                 tdName.textContent = name;
                 tdName.style.fontWeight = 'bold';
-                
                 const tdFlights = document.createElement('td');
                 tdFlights.textContent = crewMap[name].join(', ');
                 
@@ -324,8 +364,10 @@
             });
         }
 
+        // --- INIT ---
         fetchData();
-        setInterval(fetchData, 30000);
+        setInterval(fetchData, DATA_REFRESH_RATE);
+        setTimeout(() => { window.location.reload(); }, PAGE_RELOAD_RATE);
 
     </script>
 </body>
