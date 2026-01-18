@@ -6,145 +6,126 @@
     <title>Flight Dashboard</title>
     <style>
         /* --- BASE STYLES --- */
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 10px; height: 100vh; display: flex; flex-direction: column; overflow: hidden;}
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #eef2f5; margin: 0; padding: 10px; height: 100vh; display: flex; flex-direction: column; overflow: hidden;}
         
         /* HEADER AREA */
-        .header-container { margin-bottom: 10px; }
-        h1 { text-align: center; color: #333; margin: 5px 0; font-size: 20px; }
-        .top-bar { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #666; margin-bottom: 5px;}
-        
-        /* SEARCH BAR */
-        .search-container { margin-bottom: 10px; }
-        #searchInput {
-            width: 100%;
-            padding: 12px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-sizing: border-box; /* Ensures padding doesn't break width */
-        }
+        .header-container { margin-bottom: 5px; }
+        h1 { text-align: center; color: #333; margin: 5px 0; font-size: 18px; }
+        .top-status { text-align: center; font-size: 11px; color: #666; margin-bottom: 8px; }
 
-        /* TABS */
-        .tab-nav { display: flex; gap: 8px; background: #e0e0e0; padding: 5px; border-radius: 8px; margin-bottom: 10px; }
+        /* TABS NAVIGATION */
+        .tab-nav { display: flex; gap: 8px; background: #dcdcdc; padding: 4px; border-radius: 8px; margin-bottom: 10px; flex-shrink: 0; }
         .tab-btn {
             flex: 1;
-            padding: 10px;
+            padding: 12px 5px;
             border: none;
-            background: #ccc;
+            background: #bbb;
             color: #444;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             cursor: pointer;
             border-radius: 6px;
-            transition: all 0.2s;
+            white-space: nowrap;
         }
         .tab-btn.active { background: #333; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        
+        /* Special Color for Running Tab */
+        .tab-btn[onclick*="running"] { background: #2e7d32; color: white; }
+        .tab-btn[onclick*="running"].active { background: #1b5e20; box-shadow: inset 0 0 5px rgba(0,0,0,0.5); border: 2px solid #fff; }
 
         /* CONTENT AREA */
-        .tab-content { display: none; flex-grow: 1; overflow: hidden; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #ddd; }
+        .tab-content { display: none; flex-grow: 1; overflow: hidden; background: white; border-radius: 4px; border: 1px solid #ccc; }
         .tab-content.active { display: flex; flex-direction: column; }
-        .table-scroll { overflow-y: auto; height: 100%; width: 100%; -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */ }
+        .table-scroll { overflow: auto; height: 100%; width: 100%; -webkit-overflow-scrolling: touch; }
         
-        /* --- DESKTOP TABLE STYLES --- */
-        table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background-color: #333; color: white; position: sticky; top: 0; z-index: 2; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;}
+        /* --- VIEW 1: EXCEL STYLE (MASTER BOARD) --- */
+        table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; min-width: 800px; }
+        th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #eee; border-right: 1px solid #eee; white-space: nowrap; }
+        th { background-color: #333; color: white; position: sticky; top: 0; z-index: 2; font-weight: 600; font-size: 12px; }
         
-        /* Text Utilities */
+        /* --- VIEW 2: RUNNING BAYS (CARD STYLE) --- */
+        .running-container {
+            padding: 10px;
+            background: #eef2f5;
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .bay-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            border-left: 8px solid #333; 
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Header of the Card (Bay Number) */
+        .bay-header {
+            background: #333;
+            color: white;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .bay-title { font-size: 24px; font-weight: 800; letter-spacing: 1px; }
+        .bay-bowser { background: #fff; color: #333; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 14px; }
+
+        .bay-body { padding: 12px 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        
+        .info-group label { display: block; font-size: 10px; color: #888; text-transform: uppercase; font-weight: bold; }
+        .info-group span { display: block; font-size: 16px; font-weight: 600; color: #222; }
+
+        .crew-highlight { grid-column: 1 / -1; background: #fffde7; padding: 8px; border-radius: 6px; border: 1px solid #f0f0f0; }
+
+        .bay-footer { 
+            background: #f9f9f9; 
+            padding: 10px 15px; 
+            border-top: 1px solid #eee; 
+            font-size: 14px; 
+            color: #555;
+            font-style: italic;
+        }
+        .bay-footer strong { color: #333; font-style: normal; margin-right: 5px; }
+
+        /* DIVERT ALERT STYLE */
+        .divert-card { border-left-color: #d32f2f; }
+        .divert-card .bay-header { background: #d32f2f; }
+        .divert-alert {
+            background: #ffebee;
+            color: #b71c1c;
+            padding: 10px;
+            margin: 10px 15px 0 15px;
+            border-radius: 5px;
+            border: 1px solid #ffcdd2;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        /* --- TEXT UTILITIES --- */
         .diverted-text { font-style: italic; font-weight: bold; color: #444; }
         .bold-time { font-weight: bold; font-size: 1.1em; }
-        .status-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; font-weight: bold; }
 
-        /* --- MOBILE CARD VIEW (The Magic) --- */
-        @media screen and (max-width: 768px) {
-            body { height: auto; overflow-y: auto; } /* Allow full body scroll on mobile */
-            .tab-content { height: auto; overflow: visible; border: none; box-shadow: none; background: transparent; }
-            .table-scroll { overflow: visible; height: auto; }
-
-            /* Force table to block layout */
-            table, thead, tbody, th, td, tr { display: block; }
-            
-            /* Hide Header Row */
-            thead tr { position: absolute; top: -9999px; left: -9999px; }
-            
-            /* Card Style for Rows */
-            tr { 
-                background: white;
-                margin-bottom: 15px; 
-                border-radius: 12px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-                border: 1px solid #eee;
-                overflow: hidden;
-            }
-
-            /* Cell Styles */
-            td { 
-                border: none;
-                border-bottom: 1px solid #f0f0f0; 
-                position: relative;
-                padding: 10px 15px 10px 45%; /* Space for label */
-                text-align: right; 
-                min-height: 20px;
-                display: flex;
-                align-items: center;
-                justify-content: flex-end;
-            }
-            
-            /* Label Styling (Pseudo-elements) */
-            td:before { 
-                position: absolute;
-                left: 15px;
-                width: 40%; 
-                white-space: nowrap;
-                font-weight: bold;
-                color: #666;
-                text-align: left;
-                font-size: 12px;
-                text-transform: uppercase;
-            }
-
-            /* --- FLIGHT TABLE SPECIFIC LABELS --- */
-            #flightTable td:nth-of-type(1) { background: rgba(0,0,0,0.03); justify-content: center; padding: 10px; font-size: 18px; font-weight: 800; color: #333; text-align: center; }
-            #flightTable td:nth-of-type(1):before { content: ""; } /* No label for title */
-            
-            #flightTable td:nth-of-type(2):before { content: "Dep"; }
-            #flightTable td:nth-of-type(3):before { content: "Sector"; }
-            #flightTable td:nth-of-type(4):before { content: "Call Sign"; }
-            #flightTable td:nth-of-type(5):before { content: "Bay"; }
-            #flightTable td:nth-of-type(6):before { content: "ETA"; }
-            #flightTable td:nth-of-type(7):before { content: "Crew"; }
-            #flightTable td:nth-of-type(8):before { content: "Bowser"; }
-            #flightTable td:nth-of-type(9):before { content: "Comment"; }
-
-            /* --- CREW TABLE SPECIFIC LABELS --- */
-            #crewTable td:nth-of-type(1) { background: rgba(0,0,0,0.03); justify-content: center; font-weight: bold; color: #333; padding-left: 15px; }
-            #crewTable td:nth-of-type(1):before { content: ""; }
-            
-            #crewTable td:nth-of-type(2) { text-align: left; display: block; padding-left: 15px; padding-top: 30px;} 
-            #crewTable td:nth-of-type(2):before { content: "Assigned Flights:"; left: 15px; top: 8px; }
-        }
     </style>
 </head>
 <body>
 
     <div class="header-container">
         <h1>Flight Operations</h1>
-        <div class="top-bar">
-            <span id="statusMsg">Connecting...</span>
-            <span style="font-size: 10px;">v3.0 Mobile</span>
+        <div class="top-status">
+            <span id="statusMsg">Connecting...</span> | <span id="activeCount">0 Running</span>
         </div>
     </div>
 
-    <div class="search-container">
-        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search Flight, Crew, Sector...">
-    </div>
-
     <div class="tab-nav">
-        <button class="tab-btn active" onclick="openTab('flights', this)">Flight Board</button>
-        <button class="tab-btn" onclick="openTab('crew', this)">Crew Summary</button>
+        <button class="tab-btn" onclick="openTab('flights', this)">Master Board</button>
+        <button class="tab-btn active" onclick="openTab('running', this)">RUNNING BAYS</button>
+        <button class="tab-btn" onclick="openTab('crew', this)">Crew</button>
     </div>
 
-    <div id="flights" class="tab-content active">
+    <div id="flights" class="tab-content">
         <div class="table-scroll">
             <table id="flightTable">
                 <thead>
@@ -157,12 +138,18 @@
         </div>
     </div>
 
+    <div id="running" class="tab-content active">
+        <div class="running-container" id="runningContainer">
+            <div style="text-align: center; padding: 20px; color: #999;">Waiting for Bowser Assignment...</div>
+        </div>
+    </div>
+
     <div id="crew" class="tab-content">
         <div class="table-scroll">
             <table id="crewTable">
                 <thead>
                     <tr>
-                        <th>Crew Name</th>
+                        <th style="width: 30%">Crew Name</th>
                         <th>Assigned Flights</th>
                     </tr>
                 </thead>
@@ -173,33 +160,11 @@
 
     <script>
         // --- CONFIGURATION ---
-        // PASTE YOUR DEPLOYMENT URL HERE
         const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbzX64POrOcjDiH4ExaT4by-Sm_6ZubVt202AMhkwRdZdApVMsEih1wc5zmbjpETiqNRiw/exec';
+
         
         const DATA_REFRESH_RATE = 5000;
         const PAGE_RELOAD_RATE = 600000;
-
-        // --- SEARCH LOGIC ---
-        function filterTable() {
-            const input = document.getElementById("searchInput");
-            const filter = input.value.toUpperCase();
-            
-            // Filter Flight Table
-            const flightTable = document.getElementById("flightTable");
-            const flightTr = flightTable.getElementsByTagName("tr");
-            for (let i = 1; i < flightTr.length; i++) { // Skip header
-                const rowText = flightTr[i].textContent || flightTr[i].innerText;
-                flightTr[i].style.display = rowText.toUpperCase().indexOf(filter) > -1 ? "" : "none";
-            }
-
-            // Filter Crew Table
-            const crewTable = document.getElementById("crewTable");
-            const crewTr = crewTable.getElementsByTagName("tr");
-            for (let i = 1; i < crewTr.length; i++) {
-                const rowText = crewTr[i].textContent || crewTr[i].innerText;
-                crewTr[i].style.display = rowText.toUpperCase().indexOf(filter) > -1 ? "" : "none";
-            }
-        }
 
         function openTab(tabId, btnElement) {
             document.querySelectorAll('.tab-content').forEach(div => div.classList.remove('active'));
@@ -250,12 +215,13 @@
                 const flightList = jsonResponse.flights || []; 
                 const now = new Date();
                 
-                // We only render if the user is NOT currently typing searching
-                // to prevent the table from jumping while typing
-                if(document.getElementById('searchInput').value === "") {
-                    renderFlightTable(flightList, now);
-                    renderCrewSummary(flightList);
-                }
+                // Process Data
+                const processedData = processFlightData(flightList, now);
+
+                // Render Views
+                renderMasterBoard(processedData);
+                renderRunningView(processedData); 
+                renderCrewSummary(flightList);
 
                 statusMsg.textContent = 'Updated: ' + now.toLocaleTimeString();
                 statusMsg.style.color = 'green';
@@ -268,17 +234,15 @@
             }
         }
 
-        // --- RENDER FLIGHTS ---
-        function renderFlightTable(list, now) {
-            const tbody = document.querySelector('#flightTable tbody');
-            let processedRows = [];
-
-            list.forEach(row => {
+        // --- CORE LOGIC ---
+        function processFlightData(list, now) {
+            return list.map(row => {
                 const rawDep = row.data[1];
                 const rawEta = row.data[5];
                 const rawCrew = row.data[6];
-                const rawBowser = row.data[7];
+                const rawBowser = row.data[7]; 
                 const rawComment = row.data[8] ? row.data[8].toString() : "";
+                const rawBay = row.data[4];
 
                 const depTime = parseFlightTime(rawDep);
                 const etaTime = parseFlightTime(rawEta);
@@ -328,24 +292,33 @@
                     if (minsToDep <= 10) rowColor = '#ffcdd2'; 
                 }
 
-                processedRows.push({
+                return {
                     originalData: row.data,
+                    flightNo: row.data[0],
+                    sector: row.data[2],
+                    callSign: row.data[3],
+                    bay: rawBay,
+                    crew: rawCrew,
+                    bowser: rawBowser,
+                    comment: rawComment,
                     effectiveDepTime: effectiveDepTime,
                     displayDepText: displayDepText,
                     isCalculated: isCalculated,
                     finalColor: rowColor,
                     isDivert: isDivert
-                });
-            });
-
-            processedRows.sort((a, b) => {
+                };
+            }).sort((a, b) => {
                 if (!a.effectiveDepTime) return 1;
                 if (!b.effectiveDepTime) return -1;
                 return a.effectiveDepTime - b.effectiveDepTime;
             });
+        }
 
+        // --- RENDER MASTER BOARD ---
+        function renderMasterBoard(processedData) {
+            const tbody = document.querySelector('#flightTable tbody');
             tbody.innerHTML = '';
-            processedRows.forEach(item => {
+            processedData.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.style.backgroundColor = item.finalColor;
                 if (item.isDivert) tr.classList.add('diverted-text');
@@ -364,9 +337,71 @@
                 });
                 tbody.appendChild(tr);
             });
+        }
+
+        // --- RENDER RUNNING BAYS ---
+        function renderRunningView(processedData) {
+            const container = document.getElementById('runningContainer');
             
-            // Re-apply filter if text exists
-            filterTable();
+            // Only Rows where Bowser is NOT empty
+            const runningFlights = processedData.filter(item => item.bowser && item.bowser.toString().trim() !== "");
+            
+            document.getElementById('activeCount').textContent = runningFlights.length + " Running";
+
+            if (runningFlights.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;"><h3>No Active Bays</h3><p>Enter a Bowser Number in Excel to see flights here.</p></div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            
+            runningFlights.forEach(item => {
+                const card = document.createElement('div');
+                card.className = item.isDivert ? 'bay-card divert-card' : 'bay-card';
+                
+                if(item.finalColor === '#ffcdd2') card.style.borderLeftColor = 'red';
+
+                const bayDisplay = item.bay ? "BAY " + item.bay : "NO BAY";
+
+                let divertHtml = '';
+                if (item.isDivert) {
+                    divertHtml = `<div class="divert-alert">⚠️ DIVERT INSTRUCTION: Check Bowser ${item.bowser}</div>`;
+                }
+
+                card.innerHTML = `
+                    <div class="bay-header">
+                        <span class="bay-title">${bayDisplay}</span>
+                        <span class="bay-bowser">🚛 ${item.bowser}</span>
+                    </div>
+                    ${divertHtml}
+                    <div class="bay-body">
+                        <div class="info-group">
+                            <label>Flight</label>
+                            <span style="font-size: 18px;">${item.flightNo}</span>
+                        </div>
+                        <div class="info-group">
+                            <label>Sector</label>
+                            <span>${item.sector}</span>
+                        </div>
+                        <div class="info-group">
+                            <label>Call Sign</label>
+                            <span>${item.callSign}</span>
+                        </div>
+                         <div class="info-group">
+                            <label>Departure</label>
+                            <span style="${item.isCalculated ? 'color:red' : ''}">${item.displayDepText}</span>
+                        </div>
+                        <div class="crew-highlight info-group">
+                            <label>Crew</label>
+                            <span>${item.crew || '--'}</span>
+                        </div>
+                    </div>
+                    <div class="bay-footer">
+                        <strong>NOTE:</strong> ${item.comment || "No special instructions"}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
         }
 
         // --- RENDER CREW ---
@@ -388,7 +423,7 @@
             const sortedCrew = Object.keys(crewMap).sort();
             
             if (sortedCrew.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#999; padding: 20px;">No crew assigned</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#999;">No crew assigned</td></tr>';
                 return;
             }
 
@@ -403,8 +438,6 @@
                 tr.appendChild(tdFlights);
                 tbody.appendChild(tr);
             });
-            
-            filterTable();
         }
 
         fetchData();
