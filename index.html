@@ -8,12 +8,11 @@
         /* --- BASE STYLES --- */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #eef2f5; margin: 0; padding: 10px; height: 100vh; display: flex; flex-direction: column; overflow: hidden;}
         
-        /* HEADER AREA */
         .header-container { margin-bottom: 5px; }
         h1 { text-align: center; color: #333; margin: 5px 0; font-size: 18px; }
         .top-status { text-align: center; font-size: 11px; color: #666; margin-bottom: 8px; }
 
-        /* TABS NAVIGATION */
+        /* TABS */
         .tab-nav { display: flex; gap: 8px; background: #dcdcdc; padding: 4px; border-radius: 8px; margin-bottom: 10px; flex-shrink: 0; }
         .tab-btn {
             flex: 1;
@@ -28,47 +27,29 @@
             white-space: nowrap;
         }
         .tab-btn.active { background: #333; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        
-        /* Special Color for Running Tab */
         .tab-btn[onclick*="running"] { background: #2e7d32; color: white; }
         .tab-btn[onclick*="running"].active { background: #1b5e20; box-shadow: inset 0 0 5px rgba(0,0,0,0.5); border: 2px solid #fff; }
 
-        /* CONTENT AREA */
         .tab-content { display: none; flex-grow: 1; overflow: hidden; background: white; border-radius: 4px; border: 1px solid #ccc; }
         .tab-content.active { display: flex; flex-direction: column; }
         .table-scroll { overflow: auto; height: 100%; width: 100%; -webkit-overflow-scrolling: touch; }
         
-        /* --- VIEW 1: EXCEL STYLE (MASTER BOARD) --- */
-        table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; min-width: 800px; }
+        /* EXCEL VIEW */
+        table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; min-width: 900px; }
         th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #eee; border-right: 1px solid #eee; white-space: nowrap; }
         th { background-color: #333; color: white; position: sticky; top: 0; z-index: 2; font-weight: 600; font-size: 12px; }
         
-        /* --- VIEW 2: RUNNING BAYS (CARD STYLE) --- */
-        .running-container {
-            padding: 10px;
-            background: #eef2f5;
-            overflow-y: auto;
-            height: 100%;
-        }
+        /* RUNNING CARD VIEW */
+        .running-container { padding: 10px; background: #eef2f5; overflow-y: auto; height: 100%; }
 
         .bay-card {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin-bottom: 15px;
-            border-left: 8px solid #333; 
-            position: relative;
-            overflow: hidden;
+            background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 15px; border-left: 8px solid #333; position: relative; overflow: hidden;
         }
 
-        /* Header of the Card (Bay Number) */
         .bay-header {
-            background: #333;
-            color: white;
-            padding: 10px 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            background: #333; color: white; padding: 10px 15px;
+            display: flex; justify-content: space-between; align-items: center;
         }
         .bay-title { font-size: 24px; font-weight: 800; letter-spacing: 1px; }
         .bay-bowser { background: #fff; color: #333; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 14px; }
@@ -77,36 +58,24 @@
         
         .info-group label { display: block; font-size: 10px; color: #888; text-transform: uppercase; font-weight: bold; }
         .info-group span { display: block; font-size: 16px; font-weight: 600; color: #222; }
+        
+        .stat-highlight { grid-column: 1 / -1; background: #e3f2fd; padding: 8px; border-radius: 6px; border: 1px solid #bbdefb; display: flex; justify-content: space-between; align-items: center;}
+        .stat-val { color: #1565c0; font-weight: 900; font-size: 18px !important;}
+        
+        .crew-highlight { grid-column: 1 / -1; background: #fffde7; padding: 8px; border-radius: 6px; border: 1px solid #fff9c4; }
 
-        .crew-highlight { grid-column: 1 / -1; background: #fffde7; padding: 8px; border-radius: 6px; border: 1px solid #f0f0f0; }
+        .bay-footer { background: #f9f9f9; padding: 10px 15px; border-top: 1px solid #eee; font-size: 14px; color: #555; font-style: italic; }
 
-        .bay-footer { 
-            background: #f9f9f9; 
-            padding: 10px 15px; 
-            border-top: 1px solid #eee; 
-            font-size: 14px; 
-            color: #555;
-            font-style: italic;
-        }
-        .bay-footer strong { color: #333; font-style: normal; margin-right: 5px; }
-
-        /* DIVERT ALERT STYLE */
         .divert-card { border-left-color: #d32f2f; }
         .divert-card .bay-header { background: #d32f2f; }
         .divert-alert {
-            background: #ffebee;
-            color: #b71c1c;
-            padding: 10px;
-            margin: 10px 15px 0 15px;
-            border-radius: 5px;
-            border: 1px solid #ffcdd2;
-            font-weight: bold;
-            font-size: 14px;
+            background: #ffebee; color: #b71c1c; padding: 10px; margin: 10px 15px 0 15px;
+            border-radius: 5px; border: 1px solid #ffcdd2; font-weight: bold; font-size: 14px;
         }
 
-        /* --- TEXT UTILITIES --- */
         .diverted-text { font-style: italic; font-weight: bold; color: #444; }
         .bold-time { font-weight: bold; font-size: 1.1em; }
+        .copy-hint { font-size: 9px; color: #aaa; font-weight: normal; margin-left: 5px; cursor: pointer; text-decoration: underline;}
 
     </style>
 </head>
@@ -130,8 +99,7 @@
             <table id="flightTable">
                 <thead>
                     <tr>
-                        <th>Flight</th><th>Dep</th><th>Sector</th><th>Call Sign</th><th>Bay</th><th>ETA</th><th>Crew</th><th>Bowser</th><th>Comment</th>
-                    </tr>
+                        <th>Flight</th>     <th>Dep</th>        <th>Sector</th>     <th>95th %</th>     <th>Call Sign</th>  <th>Bay</th>        <th>ETA</th>        <th>Crew</th>       <th>Bowser</th>     <th>Comment</th>    </tr>
                 </thead>
                 <tbody></tbody>
             </table>
@@ -148,10 +116,7 @@
         <div class="table-scroll">
             <table id="crewTable">
                 <thead>
-                    <tr>
-                        <th style="width: 30%">Crew Name</th>
-                        <th>Assigned Flights</th>
-                    </tr>
+                    <tr><th style="width: 30%">Crew Name</th><th>Assigned Flights</th></tr>
                 </thead>
                 <tbody></tbody>
             </table>
@@ -159,9 +124,9 @@
     </div>
 
     <script>
-        // --- CONFIGURATION ---
-        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbzX64POrOcjDiH4ExaT4by-Sm_6ZubVt202AMhkwRdZdApVMsEih1wc5zmbjpETiqNRiw/exec';
-
+        // --- PASTE YOUR URL HERE ---
+        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbwqfQwBZFoTnHuVnxVZL1h7RIer_4TBBLWA2hmxQYENiIhWk6U_XabSq_ym1262qvZndw/exec';
+        // ---------------------------
         
         const DATA_REFRESH_RATE = 5000;
         const PAGE_RELOAD_RATE = 600000;
@@ -173,7 +138,6 @@
             if(btnElement) btnElement.classList.add('active');
         }
 
-        // --- TIME HELPERS ---
         function parseFlightTime(timeInput) {
             if (!timeInput) return null;
             let str = timeInput.toString().trim();
@@ -202,11 +166,20 @@
             let h = dateObj.getHours(); let m = dateObj.getMinutes();
             return (h<10?"0"+h:h) + ":" + (m<10?"0"+m:m);
         }
+        
+        function formatCleanFlight(flightStr) {
+            if(!flightStr) return "";
+            return flightStr.toString().replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+        }
 
-        // --- FETCH DATA ---
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Copied " + text + " for search!");
+            });
+        }
+
         async function fetchData() {
             const statusMsg = document.getElementById('statusMsg');
-            
             try {
                 const response = await fetch(SHEET_API_URL);
                 if (!response.ok) throw new Error("Network response was not ok");
@@ -215,10 +188,8 @@
                 const flightList = jsonResponse.flights || []; 
                 const now = new Date();
                 
-                // Process Data
                 const processedData = processFlightData(flightList, now);
 
-                // Render Views
                 renderMasterBoard(processedData);
                 renderRunningView(processedData); 
                 renderCrewSummary(flightList);
@@ -234,15 +205,19 @@
             }
         }
 
-        // --- CORE LOGIC ---
         function processFlightData(list, now) {
             return list.map(row => {
-                const rawDep = row.data[1];
-                const rawEta = row.data[5];
-                const rawCrew = row.data[6];
-                const rawBowser = row.data[7]; 
-                const rawComment = row.data[8] ? row.data[8].toString() : "";
-                const rawBay = row.data[4];
+                // --- NEW COLUMN MAPPING BASED ON YOUR IMAGE ---
+                const rawFlight  = row.data[0]; // A
+                const rawDep     = row.data[1]; // B
+                const rawSector  = row.data[2]; // C
+                const rawPercent = row.data[3]; // D (The 95% Column)
+                const rawCall    = row.data[4]; // E
+                const rawBay     = row.data[5]; // F
+                const rawEta     = row.data[6]; // G
+                const rawCrew    = row.data[7]; // H
+                const rawBowser  = row.data[8]; // I
+                const rawComment = row.data[9] ? row.data[9].toString() : ""; // J
 
                 const depTime = parseFlightTime(rawDep);
                 const etaTime = parseFlightTime(rawEta);
@@ -286,17 +261,15 @@
                 let rowColor = row.color !== '#ffffff' ? row.color : '#ffffff'; 
                 if (rawCrew) rowColor = '#fff9c4'; 
                 if (rawBowser) rowColor = '#dcedc8'; 
-                
-                if (effectiveDepTime) {
-                    const minsToDep = (effectiveDepTime - now) / 60000;
-                    if (minsToDep <= 10) rowColor = '#ffcdd2'; 
-                }
+                if (effectiveDepTime && (effectiveDepTime - now) / 60000 <= 10) rowColor = '#ffcdd2'; 
 
                 return {
                     originalData: row.data,
-                    flightNo: row.data[0],
-                    sector: row.data[2],
-                    callSign: row.data[3],
+                    flightNo: rawFlight,
+                    cleanFlight: formatCleanFlight(rawFlight),
+                    sector: rawSector,
+                    percentile: rawPercent, // NEW
+                    callSign: rawCall,
                     bay: rawBay,
                     crew: rawCrew,
                     bowser: rawBowser,
@@ -314,7 +287,6 @@
             });
         }
 
-        // --- RENDER MASTER BOARD ---
         function renderMasterBoard(processedData) {
             const tbody = document.querySelector('#flightTable tbody');
             tbody.innerHTML = '';
@@ -323,13 +295,29 @@
                 tr.style.backgroundColor = item.finalColor;
                 if (item.isDivert) tr.classList.add('diverted-text');
 
-                item.originalData.forEach((cellData, index) => {
+                // Construct columns in visual order A->J
+                const colData = [
+                    item.flightNo, 
+                    item.displayDepText, 
+                    item.sector, 
+                    item.percentile, // New Col D
+                    item.callSign, 
+                    item.bay, 
+                    formatTimeDisplay(item.originalData[6]), // ETA
+                    item.crew, 
+                    item.bowser, 
+                    item.comment
+                ];
+
+                colData.forEach((cellData, index) => {
                     const td = document.createElement('td');
-                    if (index === 1) { 
-                        td.textContent = item.displayDepText;
-                        if (item.isCalculated) td.classList.add('bold-time');
-                    } else if (index === 5) { 
-                        td.textContent = formatTimeDisplay(cellData);
+                    if (index === 1) { // Dep
+                         td.textContent = cellData;
+                         if (item.isCalculated) td.classList.add('bold-time');
+                    } else if (index === 3) { // 95% Column
+                        td.textContent = cellData;
+                        td.style.fontWeight = "bold";
+                        td.style.color = "#1565c0";
                     } else {
                         td.textContent = cellData;
                     }
@@ -339,17 +327,14 @@
             });
         }
 
-        // --- RENDER RUNNING BAYS ---
         function renderRunningView(processedData) {
             const container = document.getElementById('runningContainer');
-            
-            // Only Rows where Bowser is NOT empty
             const runningFlights = processedData.filter(item => item.bowser && item.bowser.toString().trim() !== "");
             
             document.getElementById('activeCount').textContent = runningFlights.length + " Running";
 
             if (runningFlights.length === 0) {
-                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;"><h3>No Active Bays</h3><p>Enter a Bowser Number in Excel to see flights here.</p></div>';
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;"><h3>No Active Bays</h3><p>Enter a Bowser Number to see flights.</p></div>';
                 return;
             }
 
@@ -358,15 +343,10 @@
             runningFlights.forEach(item => {
                 const card = document.createElement('div');
                 card.className = item.isDivert ? 'bay-card divert-card' : 'bay-card';
-                
                 if(item.finalColor === '#ffcdd2') card.style.borderLeftColor = 'red';
 
                 const bayDisplay = item.bay ? "BAY " + item.bay : "NO BAY";
-
-                let divertHtml = '';
-                if (item.isDivert) {
-                    divertHtml = `<div class="divert-alert">⚠️ DIVERT INSTRUCTION: Check Bowser ${item.bowser}</div>`;
-                }
+                let divertHtml = item.isDivert ? `<div class="divert-alert">⚠️ DIVERT: Check Bowser ${item.bowser}</div>` : '';
 
                 card.innerHTML = `
                     <div class="bay-header">
@@ -376,20 +356,28 @@
                     ${divertHtml}
                     <div class="bay-body">
                         <div class="info-group">
-                            <label>Flight</label>
+                            <label>Flight <span class="copy-hint" onclick="copyToClipboard('${item.cleanFlight}')">(Copy)</span></label>
                             <span style="font-size: 18px;">${item.flightNo}</span>
-                        </div>
-                        <div class="info-group">
-                            <label>Sector</label>
-                            <span>${item.sector}</span>
                         </div>
                         <div class="info-group">
                             <label>Call Sign</label>
                             <span>${item.callSign}</span>
                         </div>
-                         <div class="info-group">
-                            <label>Departure</label>
-                            <span style="${item.isCalculated ? 'color:red' : ''}">${item.displayDepText}</span>
+                        
+                        <div class="stat-highlight">
+                            <div class="info-group">
+                                <label style="color:#1565c0">95th %</label>
+                                <span class="stat-val">${item.percentile || "--"}</span>
+                            </div>
+                            <div class="info-group" style="text-align:right">
+                                <label style="color:#1565c0">Departure</label>
+                                <span style="${item.isCalculated ? 'color:red' : ''}">${item.displayDepText}</span>
+                            </div>
+                        </div>
+
+                        <div class="info-group">
+                            <label>Sector</label>
+                            <span>${item.sector}</span>
                         </div>
                         <div class="crew-highlight info-group">
                             <label>Crew</label>
@@ -404,14 +392,13 @@
             });
         }
 
-        // --- RENDER CREW ---
         function renderCrewSummary(flightList) {
             const tbody = document.querySelector('#crewTable tbody');
             const crewMap = {};
-
+            // Crew is now Index 7 (row[7])
             flightList.forEach(row => {
                 const flightNum = row.data[0]; 
-                const crewName = row.data[6];  
+                const crewName = row.data[7];  
                 if (crewName && crewName.toString().trim() !== "") {
                     const name = crewName.toString().trim();
                     if (!crewMap[name]) crewMap[name] = [];
@@ -421,12 +408,10 @@
 
             tbody.innerHTML = '';
             const sortedCrew = Object.keys(crewMap).sort();
-            
             if (sortedCrew.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#999;">No crew assigned</td></tr>';
                 return;
             }
-
             sortedCrew.forEach(name => {
                 const tr = document.createElement('tr');
                 const tdName = document.createElement('td');
