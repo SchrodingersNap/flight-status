@@ -2,80 +2,151 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-    <title>Flight Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> 
+    <title>Flight Ops</title>
     <style>
-        /* --- BASE STYLES --- */
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #eef2f5; margin: 0; padding: 10px; height: 100vh; display: flex; flex-direction: column; overflow: hidden;}
-        
-        .header-container { margin-bottom: 5px; }
-        h1 { text-align: center; color: #333; margin: 5px 0; font-size: 18px; }
-        .top-status { text-align: center; font-size: 11px; color: #666; margin-bottom: 8px; }
-
-        /* TABS */
-        .tab-nav { display: flex; gap: 8px; background: #dcdcdc; padding: 4px; border-radius: 8px; margin-bottom: 10px; flex-shrink: 0; }
-        .tab-btn {
-            flex: 1;
-            padding: 12px 5px;
-            border: none;
-            background: #bbb;
-            color: #444;
-            font-size: 13px;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 6px;
-            white-space: nowrap;
+        /* --- 1. PERFORMANCE BASE --- */
+        :root {
+            --primary: #263238;
+            --accent: #29b6f6;
+            --bg: #f4f6f8;
+            --danger: #d32f2f;
+            --success: #388e3c;
+            --warning: #fbc02d;
+            --card-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
         }
-        .tab-btn.active { background: #333; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .tab-btn[onclick*="running"] { background: #2e7d32; color: white; }
-        .tab-btn[onclick*="running"].active { background: #1b5e20; box-shadow: inset 0 0 5px rgba(0,0,0,0.5); border: 2px solid #fff; }
 
-        .tab-content { display: none; flex-grow: 1; overflow: hidden; background: white; border-radius: 4px; border: 1px solid #ccc; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: var(--bg); 
+            margin: 0; padding: 8px; height: 100vh; 
+            display: flex; flex-direction: column; overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* HEADER */
+        .header-container { margin-bottom: 5px; text-align: center; flex-shrink: 0;}
+        h1 { margin: 0; font-size: 16px; font-weight: 800; color: var(--primary); text-transform: uppercase; }
+        .top-status { font-size: 10px; color: #78909c; font-weight: 600; margin-top: 2px;}
+
+        /* TABS (Thumb-Friendly) */
+        .tab-nav { 
+            display: flex; gap: 8px; background: #dfe6e9; padding: 4px; 
+            border-radius: 12px; margin-bottom: 10px; flex-shrink: 0; 
+        }
+        .tab-btn {
+            flex: 1; padding: 12px 0; border: none; background: transparent; 
+            color: #607d8b; font-size: 13px; font-weight: 700; 
+            cursor: pointer; border-radius: 8px; transition: background 0.2s;
+        }
+        .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .tab-btn[onclick*="running"].active { background: var(--success); color: white; }
+
+        /* CONTENT AREA */
+        .tab-content { display: none; flex-grow: 1; overflow: hidden; background: white; border-radius: 8px; border: 1px solid #e0e0e0; }
         .tab-content.active { display: flex; flex-direction: column; }
-        .table-scroll { overflow: auto; height: 100%; width: 100%; -webkit-overflow-scrolling: touch; }
+        .table-scroll { overflow-y: auto; height: 100%; width: 100%; -webkit-overflow-scrolling: touch; }
         
         /* EXCEL VIEW */
-        table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; min-width: 900px; }
-        th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #eee; border-right: 1px solid #eee; white-space: nowrap; }
-        th { background-color: #333; color: white; position: sticky; top: 0; z-index: 2; font-weight: 600; font-size: 12px; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; min-width: 800px; }
+        th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #eee; border-right: 1px solid #eee; }
+        th { background-color: var(--primary); color: white; position: sticky; top: 0; z-index: 2; }
         
-        /* RUNNING CARD VIEW */
-        .running-container { padding: 10px; background: #eef2f5; overflow-y: auto; height: 100%; }
+        /* --- CREATIVE RUNNING VIEW (Mobile Optimized) --- */
+        .running-container { 
+            padding: 10px; background: #eceff1; overflow-y: auto; height: 100%; 
+            /* Grid handles spacing automatically */
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+            gap: 12px; align-content: start;
+        }
 
         .bay-card {
-            background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin-bottom: 15px; border-left: 8px solid #333; position: relative; overflow: hidden;
+            background: white; border-radius: 12px; 
+            box-shadow: var(--card-shadow);
+            display: flex; flex-direction: column;
+            border-left: 5px solid var(--primary);
+            position: relative;
         }
 
-        .bay-header {
-            background: #333; color: white; padding: 10px 15px;
+        /* CARD HEADER: Browser & Bay */
+        .card-header {
+            padding: 10px 12px;
             display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #f0f0f0;
+            background: white;
+            border-top-right-radius: 12px;
         }
-        .bay-title { font-size: 24px; font-weight: 800; letter-spacing: 1px; }
-        .bay-bowser { background: #fff; color: #333; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 14px; }
-
-        .bay-body { padding: 12px 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         
-        .info-group label { display: block; font-size: 10px; color: #888; text-transform: uppercase; font-weight: bold; }
-        .info-group span { display: block; font-size: 16px; font-weight: 600; color: #222; }
-        
-        .stat-highlight { grid-column: 1 / -1; background: #e3f2fd; padding: 8px; border-radius: 6px; border: 1px solid #bbdefb; display: flex; justify-content: space-between; align-items: center;}
-        .stat-val { color: #1565c0; font-weight: 900; font-size: 18px !important;}
-        
-        .crew-highlight { grid-column: 1 / -1; background: #fffde7; padding: 8px; border-radius: 6px; border: 1px solid #fff9c4; }
-
-        .bay-footer { background: #f9f9f9; padding: 10px 15px; border-top: 1px solid #eee; font-size: 14px; color: #555; font-style: italic; }
-
-        .divert-card { border-left-color: #d32f2f; }
-        .divert-card .bay-header { background: #d32f2f; }
-        .divert-alert {
-            background: #ffebee; color: #b71c1c; padding: 10px; margin: 10px 15px 0 15px;
-            border-radius: 5px; border: 1px solid #ffcdd2; font-weight: bold; font-size: 14px;
+        .bay-badge { 
+            font-size: 18px; font-weight: 900; color: var(--primary);
+            background: #eceff1; padding: 4px 8px; border-radius: 6px;
         }
 
-        .diverted-text { font-style: italic; font-weight: bold; color: #444; }
-        .bold-time { font-weight: bold; font-size: 1.1em; }
+        /* The TRUCK Pill */
+        .bowser-pill { 
+            background: #e8f5e9; color: #2e7d32; padding: 6px 12px; 
+            border-radius: 20px; font-weight: 800; font-size: 15px; 
+            display: flex; align-items: center; gap: 6px; border: 1px solid #c8e6c9;
+        }
+        .truck-icon { font-size: 18px; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1)); }
+
+        /* CARD BODY */
+        .card-body { padding: 12px; display: grid; grid-template-columns: 1.5fr 1fr; gap: 8px 12px; }
         
+        .label { font-size: 9px; color: #90a4ae; text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
+        .val { font-size: 14px; font-weight: 600; color: #37474f; }
+        
+        .flight-big { font-size: 22px; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; line-height: 1; }
+        
+        /* 95% WIDGET */
+        .stat-box {
+            grid-column: 1 / -1;
+            background: #e3f2fd; border: 1px solid #bbdefb;
+            padding: 8px; border-radius: 8px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 5px;
+        }
+        .stat-val { font-size: 18px; color: #1565c0; font-weight: 900; }
+        .dep-time { font-size: 16px; font-weight: 700; color: #37474f; }
+        .dep-time.urgent { color: var(--danger); animation: blink 1.5s infinite; }
+
+        /* FOOTER */
+        .card-footer {
+            background: #fafafa; padding: 8px 12px; border-top: 1px solid #eee;
+            font-size: 12px; color: #607d8b; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;
+        }
+
+        /* --- DIVERT MODE (HAZARD STRIPES) --- */
+        .card-divert {
+            border-left-color: #ff8f00 !important; /* Amber border */
+        }
+        
+        /* The Hazard Header */
+        .card-divert .card-header {
+            background: repeating-linear-gradient(
+                45deg,
+                #ffb300,
+                #ffb300 10px,
+                #ffca28 10px,
+                #ffca28 20px
+            );
+        }
+        .card-divert .bay-badge { background: white; color: black; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .card-divert .bowser-pill { background: black; color: #ffca28; border: 2px solid #ffca28; }
+        
+        .divert-msg {
+            grid-column: 1 / -1; background: #fff3e0; color: #e65100;
+            padding: 8px; font-weight: bold; font-size: 13px; text-align: center;
+            border-radius: 4px; border: 1px solid #ffe0b2; margin-bottom: 5px;
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+        }
+
+        @keyframes blink { 50% { opacity: 0.5; } }
+        
+        /* Force single column on very small phones */
+        @media (max-width: 350px) {
+            .running-container { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -83,12 +154,12 @@
     <div class="header-container">
         <h1>Flight Operations</h1>
         <div class="top-status">
-            <span id="statusMsg">Connecting...</span> | <span id="activeCount">0 Running</span>
+            <span id="statusMsg">Syncing...</span> • <span id="activeCount">0 Active</span>
         </div>
     </div>
 
     <div class="tab-nav">
-        <button class="tab-btn" onclick="openTab('flights', this)">Master Board</button>
+        <button class="tab-btn" onclick="openTab('flights', this)">List View</button>
         <button class="tab-btn active" onclick="openTab('running', this)">RUNNING BAYS</button>
         <button class="tab-btn" onclick="openTab('crew', this)">Crew</button>
     </div>
@@ -98,7 +169,8 @@
             <table id="flightTable">
                 <thead>
                     <tr>
-                        <th>Flight</th>     <th>Dep</th>        <th>Sector</th>     <th>95th %</th>     <th>Call Sign</th>  <th>Bay</th>        <th>ETA</th>        <th>Crew</th>       <th>Bowser</th>     <th>Comment</th>    </tr>
+                        <th>Flight</th><th>Dep</th><th>Sector</th><th>95%</th><th>Call Sign</th><th>Bay</th><th>ETA</th><th>Crew</th><th>Bowser</th><th>Comment</th>
+                    </tr>
                 </thead>
                 <tbody></tbody>
             </table>
@@ -107,7 +179,10 @@
 
     <div id="running" class="tab-content active">
         <div class="running-container" id="runningContainer">
-            <div style="text-align: center; padding: 20px; color: #999;">Waiting for Bowser Assignment...</div>
+            <div style="grid-column:1/-1; text-align: center; padding: 40px; color: #b0bec5;">
+                <div style="font-size: 40px;">🚛</div>
+                <p>No Active Bowsers</p>
+            </div>
         </div>
     </div>
 
@@ -115,7 +190,7 @@
         <div class="table-scroll">
             <table id="crewTable">
                 <thead>
-                    <tr><th style="width: 30%">Crew Name</th><th>Assigned Flights</th></tr>
+                    <tr><th style="width: 40%">Crew Name</th><th>Flights</th></tr>
                 </thead>
                 <tbody></tbody>
             </table>
@@ -123,9 +198,8 @@
     </div>
 
     <script>
-        // --- PASTE YOUR DEPLOYMENT URL HERE ---
-        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbwIIupWAoxwag1v8qckNWxGpw65g94Xj_HICrcG7S2jhcHNxrrVkDoFIRDx50xT1sCCXQ/exec';        // ------------------------------------------
-        
+        // --- CONFIGURATION ---
+        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbwIIupWAoxwag1v8qckNWxGpw65g94Xj_HICrcG7S2jhcHNxrrVkDoFIRDx50xT1sCCXQ/exec';        
         const DATA_REFRESH_RATE = 5000;
         const PAGE_RELOAD_RATE = 600000;
 
@@ -136,7 +210,7 @@
             if(btnElement) btnElement.classList.add('active');
         }
 
-        // --- HELPERS ---
+        // --- TIME HELPERS ---
         function parseFlightTime(timeInput) {
             if (!timeInput) return null;
             let str = timeInput.toString().trim();
@@ -166,12 +240,12 @@
             return (h<10?"0"+h:h) + ":" + (m<10?"0"+m:m);
         }
 
-        // --- FETCH ---
+        // --- FETCH LOGIC ---
         async function fetchData() {
             const statusMsg = document.getElementById('statusMsg');
             try {
                 const response = await fetch(SHEET_API_URL);
-                if (!response.ok) throw new Error("Network response was not ok");
+                if (!response.ok) throw new Error("Net Err");
                 
                 const jsonResponse = await response.json();
                 const flightList = jsonResponse.flights || []; 
@@ -180,38 +254,35 @@
                 const processedData = processFlightData(flightList, now);
 
                 renderMasterBoard(processedData);
-                renderRunningView(processedData); 
+                renderMobileRunningView(processedData); 
                 renderCrewSummary(flightList);
 
-                statusMsg.textContent = 'Updated: ' + now.toLocaleTimeString();
-                statusMsg.style.color = 'green';
-                setTimeout(() => { statusMsg.style.color = '#666'; }, 1000);
+                statusMsg.textContent = 'Live ' + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                statusMsg.style.color = '#2e7d32';
 
             } catch (error) {
-                console.error('Fetch Error:', error);
-                statusMsg.textContent = 'Connection Error';
-                statusMsg.style.color = 'red';
+                console.error(error);
+                statusMsg.textContent = 'Offline';
+                statusMsg.style.color = '#c62828';
             }
         }
 
         function processFlightData(list, now) {
             return list.map(row => {
-                // Column Mapping (Matches your screenshot)
-                const rawFlight  = row.data[0]; // A
-                const rawDep     = row.data[1]; // B
-                const rawSector  = row.data[2]; // C
-                const rawPercent = row.data[3]; // D (95%)
-                const rawCall    = row.data[4]; // E
-                const rawBay     = row.data[5]; // F
-                const rawEta     = row.data[6]; // G
-                const rawCrew    = row.data[7]; // H
-                const rawBowser  = row.data[8]; // I
-                const rawComment = row.data[9] ? row.data[9].toString() : ""; // J
+                const rawFlight = row.data[0];
+                const rawDep = row.data[1];
+                const rawSector = row.data[2];
+                const rawPercent = row.data[3];
+                const rawCall = row.data[4];
+                const rawBay = row.data[5];
+                const rawEta = row.data[6];
+                const rawCrew = row.data[7];
+                const rawBowser = row.data[8];
+                const rawComment = row.data[9] ? row.data[9].toString() : "";
 
                 const depTime = parseFlightTime(rawDep);
                 const etaTime = parseFlightTime(rawEta);
                 const etaString = (typeof rawEta === 'string') ? rawEta.toUpperCase().trim() : "";
-                
                 const isBaseOrLanded = (etaString === 'BASE' || etaString === 'LANDED');
                 const isDivert = rawComment.toLowerCase().includes('divert');
 
@@ -250,7 +321,12 @@
                 let rowColor = row.color !== '#ffffff' ? row.color : '#ffffff'; 
                 if (rawCrew) rowColor = '#fff9c4'; 
                 if (rawBowser) rowColor = '#dcedc8'; 
-                if (effectiveDepTime && (effectiveDepTime - now) / 60000 <= 10) rowColor = '#ffcdd2'; 
+                
+                let isUrgent = false;
+                if (effectiveDepTime && (effectiveDepTime - now) / 60000 <= 10) {
+                    rowColor = '#ffcdd2';
+                    isUrgent = true;
+                }
 
                 return {
                     originalData: row.data,
@@ -266,7 +342,8 @@
                     displayDepText: displayDepText,
                     isCalculated: isCalculated,
                     finalColor: rowColor,
-                    isDivert: isDivert
+                    isDivert: isDivert,
+                    isUrgent: isUrgent
                 };
             }).sort((a, b) => {
                 if (!a.effectiveDepTime) return 1;
@@ -275,14 +352,14 @@
             });
         }
 
-        // VIEW 1: MASTER BOARD
+        // --- MASTER BOARD RENDER ---
         function renderMasterBoard(processedData) {
             const tbody = document.querySelector('#flightTable tbody');
             tbody.innerHTML = '';
             processedData.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.style.backgroundColor = item.finalColor;
-                if (item.isDivert) tr.classList.add('diverted-text');
+                if (item.isDivert) { tr.style.color = '#d32f2f'; fontStyle="italic"; }
 
                 const colData = [
                     item.flightNo, item.displayDepText, item.sector, item.percentile, 
@@ -292,31 +369,24 @@
 
                 colData.forEach((cellData, index) => {
                     const td = document.createElement('td');
-                    if (index === 1) { // Dep
-                         td.textContent = cellData;
-                         if (item.isCalculated) td.classList.add('bold-time');
-                    } else if (index === 3) { // 95%
-                        td.textContent = cellData;
-                        td.style.fontWeight = "bold";
-                        td.style.color = "#1565c0";
-                    } else {
-                        td.textContent = cellData;
-                    }
+                    if (index === 1 && item.isCalculated) td.style.fontWeight = 'bold';
+                    if (index === 3) { td.style.fontWeight = "bold"; td.style.color = "#1565c0"; }
+                    td.textContent = cellData;
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
             });
         }
 
-        // VIEW 2: RUNNING BAYS (Cleaned up - No Copy)
-        function renderRunningView(processedData) {
+        // --- CREATIVE MOBILE RUNNING VIEW ---
+        function renderMobileRunningView(processedData) {
             const container = document.getElementById('runningContainer');
             const runningFlights = processedData.filter(item => item.bowser && item.bowser.toString().trim() !== "");
             
-            document.getElementById('activeCount').textContent = runningFlights.length + " Running";
+            document.getElementById('activeCount').textContent = runningFlights.length + " Active";
 
             if (runningFlights.length === 0) {
-                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;"><h3>No Active Bays</h3><p>Enter a Bowser Number to see flights.</p></div>';
+                container.innerHTML = '<div style="grid-column:1/-1; text-align: center; padding: 50px; color: #b0bec5;"><div style="font-size: 40px; margin-bottom: 10px;">🚛</div><h3>No Active Bowsers</h3></div>';
                 return;
             }
 
@@ -324,63 +394,72 @@
             
             runningFlights.forEach(item => {
                 const card = document.createElement('div');
-                card.className = item.isDivert ? 'bay-card divert-card' : 'bay-card';
-                if(item.finalColor === '#ffcdd2') card.style.borderLeftColor = 'red';
+                // Toggle Divert Class
+                card.className = item.isDivert ? 'bay-card card-divert' : 'bay-card';
+                if(item.isUrgent && !item.isDivert) card.style.borderLeftColor = '#d32f2f';
 
-                const bayDisplay = item.bay ? "BAY " + item.bay : "NO BAY";
-                let divertHtml = item.isDivert ? `<div class="divert-alert">⚠️ DIVERT: Check Bowser ${item.bowser}</div>` : '';
+                const bayDisplay = item.bay ? item.bay : "--";
+                
+                // Divert Message
+                let divertMsg = item.isDivert 
+                    ? `<div class="divert-msg">⚠️ DIVERT TRUCK TO: ${item.flightNo}</div>` 
+                    : '';
 
                 card.innerHTML = `
-                    <div class="bay-header">
-                        <span class="bay-title">${bayDisplay}</span>
-                        <span class="bay-bowser">🚛 ${item.bowser}</span>
+                    <div class="card-header">
+                        <span class="bay-badge">BAY ${bayDisplay}</span>
+                        <span class="bowser-pill"><span class="truck-icon">🚛</span> ${item.bowser}</span>
                     </div>
-                    ${divertHtml}
-                    <div class="bay-body">
-                        <div class="info-group">
-                            <label>Flight</label>
-                            <span style="font-size: 18px;">${item.flightNo}</span>
-                        </div>
-                        <div class="info-group">
-                            <label>Call Sign</label>
-                            <span>${item.callSign}</span>
+                    
+                    <div class="card-body">
+                        ${divertMsg}
+                        
+                        <div>
+                            <div class="label">FLIGHT</div>
+                            <div class="flight-big">${item.flightNo}</div>
                         </div>
                         
-                        <div class="stat-highlight">
-                            <div class="info-group">
-                                <label style="color:#1565c0">95th %</label>
-                                <span class="stat-val">${item.percentile || "--"}</span>
+                        <div style="text-align:right;">
+                            <div class="label">CALL SIGN</div>
+                            <div class="val">${item.callSign}</div>
+                        </div>
+
+                        <div class="stat-box">
+                            <div>
+                                <div class="label" style="color:#1565c0">95th %</div>
+                                <div class="stat-val">${item.percentile || "--"}</div>
                             </div>
-                            <div class="info-group" style="text-align:right">
-                                <label style="color:#1565c0">Departure</label>
-                                <span style="${item.isCalculated ? 'color:red' : ''}">${item.displayDepText}</span>
+                            <div style="text-align:right;">
+                                <div class="label" style="color:#1565c0">DEPARTURE</div>
+                                <div class="dep-time ${item.isCalculated ? 'urgent' : ''}">${item.displayDepText}</div>
                             </div>
                         </div>
 
-                        <div class="info-group">
-                            <label>Sector</label>
-                            <span>${item.sector}</span>
+                        <div>
+                            <div class="label">SECTOR</div>
+                            <div class="val">📍 ${item.sector}</div>
                         </div>
-                        <div class="crew-highlight info-group">
-                            <label>Crew</label>
-                            <span>${item.crew || '--'}</span>
+                        
+                        <div style="text-align:right;">
+                            <div class="label">CREW</div>
+                            <div class="val">${item.crew || '--'}</div>
                         </div>
                     </div>
-                    <div class="bay-footer">
-                        <strong>NOTE:</strong> ${item.comment || "No special instructions"}
+                    
+                    <div class="card-footer">
+                        ${item.comment ? "📝 " + item.comment : "No instructions"}
                     </div>
                 `;
                 container.appendChild(card);
             });
         }
 
-        // VIEW 3: CREW
         function renderCrewSummary(flightList) {
             const tbody = document.querySelector('#crewTable tbody');
             const crewMap = {};
             flightList.forEach(row => {
                 const flightNum = row.data[0]; 
-                const crewName = row.data[7];  // Index 7 is Crew in your new layout
+                const crewName = row.data[7]; 
                 if (crewName && crewName.toString().trim() !== "") {
                     const name = crewName.toString().trim();
                     if (!crewMap[name]) crewMap[name] = [];
@@ -391,18 +470,12 @@
             tbody.innerHTML = '';
             const sortedCrew = Object.keys(crewMap).sort();
             if (sortedCrew.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#999;">No crew assigned</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#999; padding:20px;">No crew assigned</td></tr>';
                 return;
             }
             sortedCrew.forEach(name => {
                 const tr = document.createElement('tr');
-                const tdName = document.createElement('td');
-                tdName.textContent = name;
-                tdName.style.fontWeight = 'bold';
-                const tdFlights = document.createElement('td');
-                tdFlights.textContent = crewMap[name].join(', ');
-                tr.appendChild(tdName);
-                tr.appendChild(tdFlights);
+                tr.innerHTML = `<td style="font-weight:bold; color:#37474f;">${name}</td><td>${crewMap[name].join(', ')}</td>`;
                 tbody.appendChild(tr);
             });
         }
