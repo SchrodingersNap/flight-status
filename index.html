@@ -105,13 +105,28 @@
         }
         .stat-val { font-size: 18px; color: #1565c0; font-weight: 900; }
         .dep-time { font-size: 16px; font-weight: 700; color: #37474f; }
-        .dep-time.urgent { color: var(--danger); animation: blink 1.5s infinite; }
-
+        
         /* FOOTER */
         .card-footer {
             background: #fafafa; padding: 8px 12px; border-top: 1px solid #eee;
             font-size: 12px; color: #607d8b; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;
         }
+
+        /* --- PRIORITY / WARNING STYLES --- */
+        .card-urgent { 
+            border-left-color: #d32f2f !important; 
+            box-shadow: 0 0 15px rgba(211, 47, 47, 0.3);
+            animation: pulse-red 2s infinite;
+        }
+        .urgent-banner {
+            grid-column: 1 / -1;
+            background: #d32f2f; color: white;
+            font-weight: 900; text-align: center; padding: 6px;
+            border-radius: 4px; font-size: 12px; letter-spacing: 0.5px;
+            animation: blink 1s infinite alternate;
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+        }
+        .dep-time.urgent { color: #d32f2f; font-weight: 900; font-size: 18px; }
 
         /* DIVERT HAZARD STYLE */
         .card-divert { border-left-color: #ff8f00 !important; }
@@ -128,7 +143,9 @@
             line-height: 1.4; display: flex; align-items: center; justify-content: center; gap: 5px;
         }
 
-        @keyframes blink { 50% { opacity: 0.5; } }
+        @keyframes blink { from { opacity: 1; } to { opacity: 0.7; } }
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(211, 47, 47, 0); } 100% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); } }
+        
         @media (max-width: 350px) { .running-container { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -303,10 +320,18 @@
                 if (rawCrew) rowColor = '#fff9c4'; 
                 if (rawBowser) rowColor = '#dcedc8'; 
                 
+                // --- URGENCY LOGIC (20 MINS) ---
                 let isUrgent = false;
-                if (effectiveDepTime && (effectiveDepTime - now) / 60000 <= 10) {
-                    rowColor = '#ffcdd2';
-                    isUrgent = true;
+                let minsToDep = 0;
+                
+                if (effectiveDepTime) {
+                    minsToDep = (effectiveDepTime - now) / 60000;
+                    
+                    // If between 0 and 20 mins, trigger Warning
+                    if (minsToDep <= 20 && minsToDep > -15) {
+                        rowColor = '#ffcdd2';
+                        isUrgent = true;
+                    }
                 }
 
                 return {
@@ -324,10 +349,10 @@
                     isCalculated: isCalculated,
                     finalColor: rowColor,
                     isDivert: isDivert,
-                    isUrgent: isUrgent
+                    isUrgent: isUrgent,
+                    minsToDep: minsToDep // Pass this for display
                 };
             }).sort((a, b) => {
-                // SORT BY TIME is Critical for "Next Flight" logic
                 if (!a.effectiveDepTime) return 1;
                 if (!b.effectiveDepTime) return -1;
                 return a.effectiveDepTime - b.effectiveDepTime;
@@ -359,7 +384,6 @@
             });
         }
 
-        // --- SMART PARSER: FINDS *NEXT* FLIGHT ---
         function renderMobileRunningView(processedData) {
             const container = document.getElementById('runningContainer');
             const runningFlights = processedData.filter(item => item.bowser && item.bowser.toString().trim() !== "");
@@ -376,40 +400,41 @@
             runningFlights.forEach(item => {
                 const card = document.createElement('div');
                 card.className = item.isDivert ? 'bay-card card-divert' : 'bay-card';
-                if(item.isUrgent && !item.isDivert) card.style.borderLeftColor = '#d32f2f';
+                
+                // If Urgent (and not diverted), add Urgent styling
+                if(item.isUrgent && !item.isDivert) {
+                    card.classList.add('card-urgent');
+                }
 
                 const bayDisplay = item.bay ? item.bay : "--";
                 
-                // --- DIVERT LOGIC: NEXT FLIGHT ONLY ---
+                // --- URGENCY BANNER (20 MIN) ---
+                let urgentBanner = '';
+                if(item.isUrgent) {
+                    const timeMsg = item.minsToDep < 1 ? "NOW" : Math.ceil(item.minsToDep) + " MIN";
+                    urgentBanner = `<div class="urgent-banner">🔥 EXPEDITE: DEP IN ${timeMsg}</div>`;
+                }
+
+                // --- SMART DIVERT ---
                 let divertMsg = '';
                 if (item.isDivert) {
                     let msgText = "⚠️ DIVERT INSTRUCTION";
-                    
                     const match = item.comment.match(/DIVERT TO[:\s]+([A-Z0-9]+)/i);
-                    
                     if (match && match[1]) {
                         const targetBay = match[1].trim().toUpperCase();
-                        
-                        // 1. Find Current Index
                         const currentIndex = processedData.indexOf(item);
-                        
-                        // 2. Search ONLY in rows BELOW this one (currentIndex + 1)
-                        // This ensures we find the NEXT flight, not a past one.
                         const rowsBelow = processedData.slice(currentIndex + 1);
-                        
                         const targetFlight = rowsBelow.find(f => 
                             f.bay && f.bay.toString().toUpperCase() === targetBay
                         );
-                        
                         if (targetFlight) {
                             msgText = `⚠️ DIVERT BOWSER TO: ${targetFlight.flightNo}/${targetFlight.sector}/${targetFlight.bay}`;
                         } else {
-                            msgText = `⚠️ DIVERT BOWSER TO: BAY ${targetBay} (No Future Flight Found)`;
+                            msgText = `⚠️ DIVERT BOWSER TO: BAY ${targetBay} (No Future Flight)`;
                         }
                     } else {
                         msgText = "⚠️ DIVERT: See Comment";
                     }
-                    
                     divertMsg = `<div class="divert-msg">${msgText}</div>`;
                 }
 
@@ -420,6 +445,7 @@
                     </div>
                     
                     <div class="card-body">
+                        ${urgentBanner}
                         ${divertMsg}
                         
                         <div>
@@ -439,7 +465,7 @@
                             </div>
                             <div style="text-align:right;">
                                 <div class="label" style="color:#1565c0">DEPARTURE</div>
-                                <div class="dep-time ${item.isCalculated ? 'urgent' : ''}">${item.displayDepText}</div>
+                                <div class="dep-time ${item.isUrgent ? 'urgent' : ''}">${item.displayDepText}</div>
                             </div>
                         </div>
 
