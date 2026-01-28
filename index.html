@@ -29,7 +29,7 @@
         h1 { margin: 0; font-size: 16px; font-weight: 800; color: var(--primary); text-transform: uppercase; }
         .top-status { font-size: 10px; color: #78909c; font-weight: 600; margin-top: 2px;}
 
-        /* TABS (Thumb-Friendly) */
+        /* TABS */
         .tab-nav { 
             display: flex; gap: 8px; background: #dfe6e9; padding: 4px; 
             border-radius: 12px; margin-bottom: 10px; flex-shrink: 0; 
@@ -42,7 +42,7 @@
         .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .tab-btn[onclick*="running"].active { background: var(--success); color: white; }
 
-        /* CONTENT AREA */
+        /* CONTENT */
         .tab-content { display: none; flex-grow: 1; overflow: hidden; background: white; border-radius: 8px; border: 1px solid #e0e0e0; }
         .tab-content.active { display: flex; flex-direction: column; }
         .table-scroll { overflow-y: auto; height: 100%; width: 100%; -webkit-overflow-scrolling: touch; }
@@ -52,10 +52,9 @@
         th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #eee; border-right: 1px solid #eee; }
         th { background-color: var(--primary); color: white; position: sticky; top: 0; z-index: 2; }
         
-        /* --- CREATIVE RUNNING VIEW (Mobile Optimized) --- */
+        /* --- MOBILE RUNNING VIEW --- */
         .running-container { 
             padding: 10px; background: #eceff1; overflow-y: auto; height: 100%; 
-            /* Grid handles spacing automatically */
             display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
             gap: 12px; align-content: start;
         }
@@ -68,7 +67,7 @@
             position: relative;
         }
 
-        /* CARD HEADER: Browser & Bay */
+        /* CARD HEADER */
         .card-header {
             padding: 10px 12px;
             display: flex; justify-content: space-between; align-items: center;
@@ -82,7 +81,6 @@
             background: #eceff1; padding: 4px 8px; border-radius: 6px;
         }
 
-        /* The TRUCK Pill */
         .bowser-pill { 
             background: #e8f5e9; color: #2e7d32; padding: 6px 12px; 
             border-radius: 20px; font-weight: 800; font-size: 15px; 
@@ -95,7 +93,6 @@
         
         .label { font-size: 9px; color: #90a4ae; text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
         .val { font-size: 14px; font-weight: 600; color: #37474f; }
-        
         .flight-big { font-size: 22px; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; line-height: 1; }
         
         /* 95% WIDGET */
@@ -116,37 +113,23 @@
             font-size: 12px; color: #607d8b; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;
         }
 
-        /* --- DIVERT MODE (HAZARD STRIPES) --- */
-        .card-divert {
-            border-left-color: #ff8f00 !important; /* Amber border */
-        }
-        
-        /* The Hazard Header */
+        /* DIVERT HAZARD STYLE */
+        .card-divert { border-left-color: #ff8f00 !important; }
         .card-divert .card-header {
-            background: repeating-linear-gradient(
-                45deg,
-                #ffb300,
-                #ffb300 10px,
-                #ffca28 10px,
-                #ffca28 20px
-            );
+            background: repeating-linear-gradient(45deg, #ffb300, #ffb300 10px, #ffca28 10px, #ffca28 20px);
         }
         .card-divert .bay-badge { background: white; color: black; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .card-divert .bowser-pill { background: black; color: #ffca28; border: 2px solid #ffca28; }
         
         .divert-msg {
             grid-column: 1 / -1; background: #fff3e0; color: #e65100;
-            padding: 8px; font-weight: bold; font-size: 13px; text-align: center;
+            padding: 10px; font-weight: bold; font-size: 14px; text-align: center;
             border-radius: 4px; border: 1px solid #ffe0b2; margin-bottom: 5px;
-            display: flex; align-items: center; justify-content: center; gap: 5px;
+            line-height: 1.4; display: flex; align-items: center; justify-content: center; gap: 5px;
         }
 
         @keyframes blink { 50% { opacity: 0.5; } }
-        
-        /* Force single column on very small phones */
-        @media (max-width: 350px) {
-            .running-container { grid-template-columns: 1fr; }
-        }
+        @media (max-width: 350px) { .running-container { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -210,7 +193,6 @@
             if(btnElement) btnElement.classList.add('active');
         }
 
-        // --- TIME HELPERS ---
         function parseFlightTime(timeInput) {
             if (!timeInput) return null;
             let str = timeInput.toString().trim();
@@ -240,7 +222,6 @@
             return (h<10?"0"+h:h) + ":" + (m<10?"0"+m:m);
         }
 
-        // --- FETCH LOGIC ---
         async function fetchData() {
             const statusMsg = document.getElementById('statusMsg');
             try {
@@ -346,20 +327,20 @@
                     isUrgent: isUrgent
                 };
             }).sort((a, b) => {
+                // SORT BY TIME is Critical for "Next Flight" logic
                 if (!a.effectiveDepTime) return 1;
                 if (!b.effectiveDepTime) return -1;
                 return a.effectiveDepTime - b.effectiveDepTime;
             });
         }
 
-        // --- MASTER BOARD RENDER ---
         function renderMasterBoard(processedData) {
             const tbody = document.querySelector('#flightTable tbody');
             tbody.innerHTML = '';
             processedData.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.style.backgroundColor = item.finalColor;
-                if (item.isDivert) { tr.style.color = '#d32f2f'; fontStyle="italic"; }
+                if (item.isDivert) { tr.style.color = '#d32f2f'; tr.style.fontStyle = "italic"; }
 
                 const colData = [
                     item.flightNo, item.displayDepText, item.sector, item.percentile, 
@@ -378,7 +359,7 @@
             });
         }
 
-        // --- CREATIVE MOBILE RUNNING VIEW ---
+        // --- SMART PARSER: FINDS *NEXT* FLIGHT ---
         function renderMobileRunningView(processedData) {
             const container = document.getElementById('runningContainer');
             const runningFlights = processedData.filter(item => item.bowser && item.bowser.toString().trim() !== "");
@@ -394,16 +375,43 @@
             
             runningFlights.forEach(item => {
                 const card = document.createElement('div');
-                // Toggle Divert Class
                 card.className = item.isDivert ? 'bay-card card-divert' : 'bay-card';
                 if(item.isUrgent && !item.isDivert) card.style.borderLeftColor = '#d32f2f';
 
                 const bayDisplay = item.bay ? item.bay : "--";
                 
-                // Divert Message
-                let divertMsg = item.isDivert 
-                    ? `<div class="divert-msg">⚠️ DIVERT TRUCK TO: ${item.flightNo}</div>` 
-                    : '';
+                // --- DIVERT LOGIC: NEXT FLIGHT ONLY ---
+                let divertMsg = '';
+                if (item.isDivert) {
+                    let msgText = "⚠️ DIVERT INSTRUCTION";
+                    
+                    const match = item.comment.match(/DIVERT TO[:\s]+([A-Z0-9]+)/i);
+                    
+                    if (match && match[1]) {
+                        const targetBay = match[1].trim().toUpperCase();
+                        
+                        // 1. Find Current Index
+                        const currentIndex = processedData.indexOf(item);
+                        
+                        // 2. Search ONLY in rows BELOW this one (currentIndex + 1)
+                        // This ensures we find the NEXT flight, not a past one.
+                        const rowsBelow = processedData.slice(currentIndex + 1);
+                        
+                        const targetFlight = rowsBelow.find(f => 
+                            f.bay && f.bay.toString().toUpperCase() === targetBay
+                        );
+                        
+                        if (targetFlight) {
+                            msgText = `⚠️ DIVERT BOWSER TO: ${targetFlight.flightNo}/${targetFlight.sector}/${targetFlight.bay}`;
+                        } else {
+                            msgText = `⚠️ DIVERT BOWSER TO: BAY ${targetBay} (No Future Flight Found)`;
+                        }
+                    } else {
+                        msgText = "⚠️ DIVERT: See Comment";
+                    }
+                    
+                    divertMsg = `<div class="divert-msg">${msgText}</div>`;
+                }
 
                 card.innerHTML = `
                     <div class="card-header">
