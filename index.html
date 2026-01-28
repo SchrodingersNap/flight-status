@@ -75,8 +75,7 @@
 
         .diverted-text { font-style: italic; font-weight: bold; color: #444; }
         .bold-time { font-weight: bold; font-size: 1.1em; }
-        .copy-hint { font-size: 9px; color: #aaa; font-weight: normal; margin-left: 5px; cursor: pointer; text-decoration: underline;}
-
+        
     </style>
 </head>
 <body>
@@ -124,9 +123,8 @@
     </div>
 
     <script>
-        // --- PASTE YOUR URL HERE ---
-        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbwIIupWAoxwag1v8qckNWxGpw65g94Xj_HICrcG7S2jhcHNxrrVkDoFIRDx50xT1sCCXQ/exec';
-        // ---------------------------
+        // --- PASTE YOUR DEPLOYMENT URL HERE ---
+        const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbwIIupWAoxwag1v8qckNWxGpw65g94Xj_HICrcG7S2jhcHNxrrVkDoFIRDx50xT1sCCXQ/exec';        // ------------------------------------------
         
         const DATA_REFRESH_RATE = 5000;
         const PAGE_RELOAD_RATE = 600000;
@@ -138,6 +136,7 @@
             if(btnElement) btnElement.classList.add('active');
         }
 
+        // --- HELPERS ---
         function parseFlightTime(timeInput) {
             if (!timeInput) return null;
             let str = timeInput.toString().trim();
@@ -166,18 +165,8 @@
             let h = dateObj.getHours(); let m = dateObj.getMinutes();
             return (h<10?"0"+h:h) + ":" + (m<10?"0"+m:m);
         }
-        
-        function formatCleanFlight(flightStr) {
-            if(!flightStr) return "";
-            return flightStr.toString().replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-        }
 
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                alert("Copied " + text + " for search!");
-            });
-        }
-
+        // --- FETCH ---
         async function fetchData() {
             const statusMsg = document.getElementById('statusMsg');
             try {
@@ -207,11 +196,11 @@
 
         function processFlightData(list, now) {
             return list.map(row => {
-                // --- NEW COLUMN MAPPING BASED ON YOUR IMAGE ---
+                // Column Mapping (Matches your screenshot)
                 const rawFlight  = row.data[0]; // A
                 const rawDep     = row.data[1]; // B
                 const rawSector  = row.data[2]; // C
-                const rawPercent = row.data[3]; // D (The 95% Column)
+                const rawPercent = row.data[3]; // D (95%)
                 const rawCall    = row.data[4]; // E
                 const rawBay     = row.data[5]; // F
                 const rawEta     = row.data[6]; // G
@@ -266,9 +255,8 @@
                 return {
                     originalData: row.data,
                     flightNo: rawFlight,
-                    cleanFlight: formatCleanFlight(rawFlight),
                     sector: rawSector,
-                    percentile: rawPercent, // NEW
+                    percentile: rawPercent, 
                     callSign: rawCall,
                     bay: rawBay,
                     crew: rawCrew,
@@ -287,6 +275,7 @@
             });
         }
 
+        // VIEW 1: MASTER BOARD
         function renderMasterBoard(processedData) {
             const tbody = document.querySelector('#flightTable tbody');
             tbody.innerHTML = '';
@@ -295,18 +284,10 @@
                 tr.style.backgroundColor = item.finalColor;
                 if (item.isDivert) tr.classList.add('diverted-text');
 
-                // Construct columns in visual order A->J
                 const colData = [
-                    item.flightNo, 
-                    item.displayDepText, 
-                    item.sector, 
-                    item.percentile, // New Col D
-                    item.callSign, 
-                    item.bay, 
-                    formatTimeDisplay(item.originalData[6]), // ETA
-                    item.crew, 
-                    item.bowser, 
-                    item.comment
+                    item.flightNo, item.displayDepText, item.sector, item.percentile, 
+                    item.callSign, item.bay, formatTimeDisplay(item.originalData[6]), 
+                    item.crew, item.bowser, item.comment
                 ];
 
                 colData.forEach((cellData, index) => {
@@ -314,7 +295,7 @@
                     if (index === 1) { // Dep
                          td.textContent = cellData;
                          if (item.isCalculated) td.classList.add('bold-time');
-                    } else if (index === 3) { // 95% Column
+                    } else if (index === 3) { // 95%
                         td.textContent = cellData;
                         td.style.fontWeight = "bold";
                         td.style.color = "#1565c0";
@@ -327,6 +308,7 @@
             });
         }
 
+        // VIEW 2: RUNNING BAYS (Cleaned up - No Copy)
         function renderRunningView(processedData) {
             const container = document.getElementById('runningContainer');
             const runningFlights = processedData.filter(item => item.bowser && item.bowser.toString().trim() !== "");
@@ -356,7 +338,7 @@
                     ${divertHtml}
                     <div class="bay-body">
                         <div class="info-group">
-                            <label>Flight <span class="copy-hint" onclick="copyToClipboard('${item.cleanFlight}')">(Copy)</span></label>
+                            <label>Flight</label>
                             <span style="font-size: 18px;">${item.flightNo}</span>
                         </div>
                         <div class="info-group">
@@ -392,13 +374,13 @@
             });
         }
 
+        // VIEW 3: CREW
         function renderCrewSummary(flightList) {
             const tbody = document.querySelector('#crewTable tbody');
             const crewMap = {};
-            // Crew is now Index 7 (row[7])
             flightList.forEach(row => {
                 const flightNum = row.data[0]; 
-                const crewName = row.data[7];  
+                const crewName = row.data[7];  // Index 7 is Crew in your new layout
                 if (crewName && crewName.toString().trim() !== "") {
                     const name = crewName.toString().trim();
                     if (!crewMap[name]) crewMap[name] = [];
